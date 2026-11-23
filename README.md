@@ -45,7 +45,9 @@ npm install
 npm run dev
 
 
+## 👩‍💻 Hecho por
 
+**Lii Méndez**
 
 
 
