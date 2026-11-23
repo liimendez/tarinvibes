@@ -1,75 +1,30 @@
-# React + TypeScript + Vite
+# TarinVibes 🦇
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+> La comunidad volvió, con otras vibes.
 
-Currently, two official plugins are available:
+Homenaje no oficial a la comunidad estilo Taringa, construido desde cero para aprender React + TypeScript.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+**No afiliado a Taringa.**
 
-## React Compiler
+## ✨ Qué hace
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **Feed de comunidad** con posts por categoría
+- **Crear post** con título, cuerpo y categoría
+- **Votar** con puntos estilo Taringa (1 voto por usuario por post)
+- **Comentarios** en cada post, guardados
+- **Borrar** posts
+- **Filtrar** por categoría: Música / Gatos / Tecnología / Humor / Vida / Gaming
+- **Buscar** por título
+- **Ordenar** por más recientes o más votados
+- **Login simulado** - cambiar entre Lii, Mica y Tomi
+- **Persistencia** con localStorage, como si fuera una base de datos
 
-## Expanding the ESLint configuration
+## 🛠️ Stack
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+- React + TypeScript + Vite
+- Tailwind CSS v4
+- localStorage como capa de datos
+- Arquitectura: `types` / `usePosts` (lógica) / `PostCard` (UI) / `App` (layout)
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## 📁 Estructura
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
-```
-
-You can also install [eslint-plugin-react-x](https://npmx.dev/package/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://npmx.dev/package/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
-```
