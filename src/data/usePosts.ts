@@ -1,8 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { Post, User } from './types'
-
-const KEY = 'tarinvibes_v1'
-const VOTOS_KEY = 'tarinvibes_votos'
+import { supabase } from '../lib/supabase'
 
 export const USUARIOS: User[] = [
   { id: 'u1', nombre: 'Lii Méndez', username: 'lii', avatar: '🦇' },
@@ -16,88 +14,128 @@ export function getUsuarioActual(): User {
   return USUARIOS[0]
 }
 
-const SEED: Post[] = [
-  {
-    id: '1',
-    titulo: 'Mi gato escucha más thrash que yo',
-    slug: 'mi-gato-escucha-mas-thrash-que-yo',
-    cuerpo: 'Les juro que cada vez que pongo metallica, Luna se acuesta al lado del parlante. ¿Sus gatos también tienen bandas favoritas?',
-    categoria: 'Gatos',
-    tags: ['gatos', 'thrash'],
-    autor: USUARIOS[0],
-    puntos: 42,
-    createdAt: '2026-11-22',
-    comentarios: [],
-  },
-  {
-    id: '2',
-    titulo: 'De DBA a frontend: lo que nadie te cuenta',
-    slug: 'de-dba-a-frontend',
-    cuerpo: 'Como DBA aprendí a pensar en índices, queries y performance. En frontend eso sirve un montón.',
-    categoria: 'Tecnología',
-    tags: ['dba', 'frontend'],
-    autor: USUARIOS[0],
-    puntos: 28,
-    createdAt: '2026-11-21',
-    comentarios: [],
-  },
-]
+function mapPost(row: any): Post {
+  return {
+    id: row.id,
+    titulo: row.titulo,
+    slug: row.slug,
+    cuerpo: row.cuerpo,
+    categoria: row.categoria,
+    tags: row.tags || [],
+    autor: {
+      id: row.autor_id || 'u1',
+      nombre: row.profiles?.nombre || 'Lii Méndez',
+      username: row.profiles?.username || 'lii',
+      avatar: row.profiles?.avatar || '🦇',
+    },
+    puntos: row.puntos || 0,
+    createdAt: row.created_at?.slice(0, 10) || '',
+    comentarios: (row.comments || []).map((c: any) => ({
+      id: c.id,
+      postId: c.post_id,
+      autor: {
+        id: c.autor_id || 'u1',
+        nombre: c.profiles?.nombre || 'Lii Méndez',
+        username: c.profiles?.username || 'lii',
+        avatar: c.profiles?.avatar || '🦇',
+      },
+      texto: c.texto,
+      createdAt: c.created_at?.slice(0, 10) || '',
+    })),
+  }
+}
 
 export function usePosts() {
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    setTimeout(() => {
-      const guardado = localStorage.getItem(KEY)
-      if (guardado) {
-        const parsed = JSON.parse(guardado)
-        const conComentarios = parsed.map((p: any) => ({ ...p, comentarios: p.comentarios || [] }))
-        setPosts(conComentarios)
-      } else {
-        localStorage.setItem(KEY, JSON.stringify(SEED))
-        setPosts(SEED)
-      }
-      setLoading(false)
-    }, 300)
-  }, [])
+async function cargar() {
+  const { data: postsData, error } = await supabase
+    .from('posts')
+    .select('*')
+    .order('created_at', { ascending: false })
 
-  function guardar(next: Post[]) {
-    setPosts(next)
-    localStorage.setItem(KEY, JSON.stringify(next))
-  }
-
- function votar(id: string) {
-  const votosGuardados = JSON.parse(localStorage.getItem(VOTOS_KEY) || '[]') as string[]
-  if (votosGuardados.includes(id)) {
-    alert('Ya votaste este post!')
+  if (error) {
+    console.log('Error Supabase:', error)
+    setLoading(false)
     return
   }
-  const nuevosVotos = [...votosGuardados, id]
-  localStorage.setItem(VOTOS_KEY, JSON.stringify(nuevosVotos))
-  guardar(posts.map(p => p.id === id ? { ...p, puntos: p.puntos + 1 } : p))
+
+  const { data: commentsData } = await supabase
+    .from('comments')
+    .select('*')
+    .order('created_at', { ascending: true })
+
+  const postsMapeados = (postsData || []).map((row: any) => ({
+    id: row.id,
+    titulo: row.titulo,
+    slug: row.slug,
+    cuerpo: row.cuerpo,
+    categoria: row.categoria,
+    tags: row.tags || [],
+    autor: { id: 'u1', nombre: 'Lii Méndez', username: 'lii', avatar: '🦇' },
+    puntos: row.puntos || 0,
+    createdAt: row.created_at?.slice(0, 10) || '',
+    comentarios: (commentsData || [])
+      .filter((c: any) => c.post_id === row.id)
+      .map((c: any) => ({
+        id: c.id,
+        postId: c.post_id,
+        autor: { id: 'u1', nombre: 'Lii Méndez', username: 'lii', avatar: '🦇' },
+        texto: c.texto,
+        createdAt: c.created_at?.slice(0, 10) || '',
+      })),
+  }))
+
+  setPosts(postsMapeados)
+  setLoading(false)
 }
 
-  function agregar(p: Post) {
-    guardar([p, ...posts])
+  useEffect(() => {
+    cargar()
+  }, [])
+
+  async function votar(id: string) {
+    const post = posts.find(p => p.id === id)
+    if (!post) return
+    const { error } = await supabase
+      .from('posts')
+      .update({ puntos: post.puntos + 1 })
+      .eq('id', id)
+    if (!error) cargar()
   }
 
-  function borrar(id: string) {
-    guardar(posts.filter(p => p.id !== id))
+ async function agregar(p: Post) {
+  console.log('Intentando crear post:', p)
+  const { data, error } = await supabase.from('posts').insert({
+    titulo: p.titulo,
+    slug: p.slug,
+    cuerpo: p.cuerpo,
+    categoria: p.categoria,
+    tags: p.tags,
+    puntos: 0,
+  }).select()
+
+  console.log('Resultado insert:', data, error)
+  if (error) {
+    alert('Error al crear post: ' + error.message)
+    return
+  }
+  cargar()
+}
+
+  async function borrar(id: string) {
+    await supabase.from('posts').delete().eq('id', id)
+    cargar()
   }
 
-  function comentar(postId: string, texto: string) {
-    guardar(posts.map(p => p.id === postId ? {
-      ...p,
-      comentarios: [...(p.comentarios || []), {
-        id: Date.now().toString(),
-        postId,
-        autor: getUsuarioActual(),
-        texto,
-        createdAt: new Date().toISOString().slice(0, 10)
-      }]
-    } : p))
+  async function comentar(postId: string, texto: string) {
+    await supabase.from('comments').insert({
+      post_id: postId,
+      texto,
+    })
+    cargar()
   }
 
-  return { posts, loading, votar, agregar, borrar, comentar }
+  return { posts, loading, votar, agregar, borrar, comentar, recargar: cargar }
 }
