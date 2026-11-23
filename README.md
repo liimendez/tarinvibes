@@ -28,3 +28,34 @@ Homenaje no oficial a la comunidad estilo Taringa, construido desde cero para ap
 
 ## 📁 Estructura
 
+src/
+data/
+types.ts -> Categoria, User, Post, Comentario
+usePosts.ts -> SEED, guardar, votar, agregar, borrar, comentar
+components/
+PostCard.tsx -> Tarjeta de cada post + comentarios
+App.tsx -> Layout, filtros, crear post, feed
+
+
+
+## 🚀 Cómo correrlo
+
+```bash
+npm install
+npm run dev
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
