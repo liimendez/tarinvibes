@@ -14,36 +14,6 @@ export function getUsuarioActual(): User {
   return USUARIOS[0]
 }
 
-function mapPost(row: any): Post {
-  return {
-    id: row.id,
-    titulo: row.titulo,
-    slug: row.slug,
-    cuerpo: row.cuerpo,
-    categoria: row.categoria,
-    tags: row.tags || [],
-    autor: {
-      id: row.autor_id || 'u1',
-      nombre: row.profiles?.nombre || 'Lii Méndez',
-      username: row.profiles?.username || 'lii',
-      avatar: row.profiles?.avatar || '🦇',
-    },
-    puntos: row.puntos || 0,
-    createdAt: row.created_at?.slice(0, 10) || '',
-    comentarios: (row.comments || []).map((c: any) => ({
-      id: c.id,
-      postId: c.post_id,
-      autor: {
-        id: c.autor_id || 'u1',
-        nombre: c.profiles?.nombre || 'Lii Méndez',
-        username: c.profiles?.username || 'lii',
-        avatar: c.profiles?.avatar || '🦇',
-      },
-      texto: c.texto,
-      createdAt: c.created_at?.slice(0, 10) || '',
-    })),
-  }
-}
 
 export function usePosts() {
   const [posts, setPosts] = useState<Post[]>([])
