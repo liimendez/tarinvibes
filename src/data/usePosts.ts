@@ -35,19 +35,19 @@ export function usePosts() {
       .select('*')
       .order('created_at', { ascending: true })
 
-    // 👇 Traemos los perfiles reales para no mostrar siempre Lii Méndez
+    // 👇 Traemos los perfiles reales con bio y ciudad
     const { data: profilesData } = await supabase
       .from('profiles')
-      .select('id, nombre, username, avatar')
+      .select('id, nombre, username, avatar, bio, ciudad')
 
     const mapaPerfiles = new Map((profilesData || []).map((p: any) => [p.id, p]))
 
     function autorDe(autorId: string | null): User {
       if (autorId && mapaPerfiles.has(autorId)) {
         const p = mapaPerfiles.get(autorId)
-        return { id: p.id, nombre: p.nombre || p.username || 'Usuario', username: p.username || 'usuario', avatar: p.avatar || '🦇' }
+        return { id: p.id, nombre: p.nombre || p.username || 'Usuario', username: p.username || 'usuario', avatar: p.avatar || '🦇', bio: p.bio || '', ciudad: p.ciudad || '' }
       }
-      return { id: 'u1', nombre: 'Lii Méndez', username: 'lii', avatar: '🦇' }
+      return { id: 'u1', nombre: 'Lii Méndez', username: 'lii', avatar: '🦇', bio: '', ciudad: '' }
     }
 
     const postsMapeados = (postsData || []).map((row: any) => ({
@@ -138,9 +138,7 @@ export function usePosts() {
   }
 
   async function editar(id: string, datos: { titulo: string, cuerpo: string, categoria: Categoria }) {
-    // Actualizar en pantalla al toque
     setPosts(prev => prev.map(p => p.id === id ? { ...p, ...datos } : p))
-    // Guardar en Supabase
     await supabase.from('posts').update({
       titulo: datos.titulo,
       cuerpo: datos.cuerpo,

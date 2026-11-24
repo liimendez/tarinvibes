@@ -19,6 +19,8 @@ export default function UserPanel({ usuario, posts, isOwn, onVolver, onAbrirPost
   const [nombreEdit, setNombreEdit] = useState(usuario.nombre)
   const [usernameEdit, setUsernameEdit] = useState(usuario.username)
   const [avatarEdit, setAvatarEdit] = useState(usuario.avatar)
+  const [bioEdit, setBioEdit] = useState(usuario.bio || '')
+  const [ciudadEdit, setCiudadEdit] = useState(usuario.ciudad || '')
   const [nuevaClave, setNuevaClave] = useState('')
   const [repetirClave, setRepetirClave] = useState('')
   const [guardando, setGuardando] = useState(false)
@@ -35,7 +37,6 @@ export default function UserPanel({ usuario, posts, isOwn, onVolver, onAbrirPost
 
     const usernameLimpio = usernameEdit.trim().toLowerCase().replace(/[^a-z0-9_.]/g, '')
 
-    // 👇 Chequear ANTES de guardar nada: ¿ese username ya lo tiene otro?
     const { data: existe } = await supabase
       .from('profiles')
       .select('id')
@@ -47,11 +48,12 @@ export default function UserPanel({ usuario, posts, isOwn, onVolver, onAbrirPost
 
     setGuardando(true)
 
-    // 1. Actualizar perfil en Supabase
     const { error } = await supabase.from('profiles').update({
       nombre: nombreEdit.trim(),
       username: usernameLimpio,
       avatar: avatarEdit,
+      bio: bioEdit.trim(),
+      ciudad: ciudadEdit.trim(),
     }).eq('id', usuario.id)
 
     if (error) {
@@ -59,7 +61,6 @@ export default function UserPanel({ usuario, posts, isOwn, onVolver, onAbrirPost
       return alert('Error al guardar perfil: ' + error.message)
     }
 
-    // 2. Cambiar contraseña si puso una nueva
     if (nuevaClave) {
       const { error: errorClave } = await supabase.auth.updateUser({ password: nuevaClave })
       if (errorClave) {
@@ -76,6 +77,17 @@ export default function UserPanel({ usuario, posts, isOwn, onVolver, onAbrirPost
     onPerfilActualizado?.()
   }
 
+  function cancelar() {
+    setEditando(false)
+    setNombreEdit(usuario.nombre)
+    setUsernameEdit(usuario.username)
+    setAvatarEdit(usuario.avatar)
+    setBioEdit(usuario.bio || '')
+    setCiudadEdit(usuario.ciudad || '')
+    setNuevaClave('')
+    setRepetirClave('')
+  }
+
   return (
     <div className="space-y-4">
       <button onClick={onVolver} className="text-sm text-[#A78BFA]">← Volver al feed</button>
@@ -86,6 +98,8 @@ export default function UserPanel({ usuario, posts, isOwn, onVolver, onAbrirPost
           <>
             <h2 className="text-2xl font-black mt-2">{usuario.nombre}</h2>
             <p className="text-[#A78BFA]">@{usuario.username}</p>
+            {usuario.bio && <p className="mt-2 text-sm max-w-md mx-auto">{usuario.bio}</p>}
+            {usuario.ciudad && <p className="text-xs text-[#A78BFA] mt-1">📍 {usuario.ciudad}</p>}
           </>
         ) : (
           <div className="space-y-2 mt-3 text-left max-w-sm mx-auto">
@@ -99,13 +113,17 @@ export default function UserPanel({ usuario, posts, isOwn, onVolver, onAbrirPost
                 <button key={a} type="button" onClick={() => setAvatarEdit(a)} className={avatarEdit === a ? 'text-2xl bg-violet-600 rounded-xl p-1' : 'text-2xl bg-[#0B0714] border border-[#3B2A66] rounded-xl p-1'}>{a}</button>
               ))}
             </div>
+            <label className="text-xs text-[#A78BFA]">Sobre mí</label>
+            <textarea value={bioEdit} onChange={e => setBioEdit(e.target.value)} placeholder="Contanos algo de vos... ej: fan de Jim Carrey" rows={2} className="w-full bg-[#0B0714] border border-[#3B2A66] rounded-xl p-2 text-sm" />
+            <label className="text-xs text-[#A78BFA]">Ciudad</label>
+            <input value={ciudadEdit} onChange={e => setCiudadEdit(e.target.value)} placeholder="Ej: Temperley" className="w-full bg-[#0B0714] border border-[#3B2A66] rounded-xl p-2 text-sm" />
             <hr className="border-[#3B2A66] my-2" />
             <p className="text-sm font-bold">🔒 Cambiar contraseña <span className="text-xs text-[#A78BFA] font-normal">(dejalo vacío si no querés cambiarla)</span></p>
             <input type="password" value={nuevaClave} onChange={e => setNuevaClave(e.target.value)} placeholder="Nueva contraseña" className="w-full bg-[#0B0714] border border-[#3B2A66] rounded-xl p-2 text-sm" />
             <input type="password" value={repetirClave} onChange={e => setRepetirClave(e.target.value)} placeholder="Repetí la nueva contraseña" className="w-full bg-[#0B0714] border border-[#3B2A66] rounded-xl p-2 text-sm" />
             <div className="flex gap-2 justify-center">
               <button onClick={guardar} disabled={guardando} className="bg-violet-600 px-4 py-2 rounded-xl font-bold text-sm">{guardando ? 'Guardando...' : 'Guardar'}</button>
-              <button onClick={() => { setEditando(false); setNombreEdit(usuario.nombre); setUsernameEdit(usuario.username); setAvatarEdit(usuario.avatar); setNuevaClave(''); setRepetirClave('') }} className="bg-[#2E1065] px-4 py-2 rounded-xl text-sm">Cancelar</button>
+              <button onClick={cancelar} className="bg-[#2E1065] px-4 py-2 rounded-xl text-sm">Cancelar</button>
             </div>
           </div>
         )}

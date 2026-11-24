@@ -5,6 +5,8 @@ export interface User {
   nombre: string
   username: string
   avatar: string
+  bio?: string
+ciudad?: string
 }
 
 export interface Comentario {
@@ -27,3 +29,12 @@ export interface Post {
   createdAt: string
   comentarios: Comentario[]
 }
+
+
+
+
+
+
+
+
+
