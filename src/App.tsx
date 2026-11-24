@@ -1,3 +1,4 @@
+// fix url - forzar rebuild con la URL correcta de Supabase
 import { useEffect, useState } from 'react'
 import Auth from './components/Auth'
 import { supabase } from './lib/supabase'
@@ -107,7 +108,7 @@ export default function App() {
         </section>
       </main>
       <footer className="max-w-6xl mx-auto px-6 pb-8 text-center text-xs text-[#A78BFA]">
-        <p>TarinVibes — Homenaje no oficial a la comunidad, hecho con otras vibes.</p>
+       <p>TarinVibes — Homenaje no oficial a la comunidad, hecho con otras vibes. v2</p>
         <p>No afiliado a Taringa. Hecho por Lii Méndez para aprender React + TypeScript.</p>
       </footer>
     </div>
