@@ -35,19 +35,18 @@ export function usePosts() {
       .select('*')
       .order('created_at', { ascending: true })
 
-    // 👇 Traemos los perfiles reales con bio y ciudad
     const { data: profilesData } = await supabase
       .from('profiles')
-      .select('id, nombre, username, avatar, bio, ciudad')
+      .select('id, nombre, username, avatar, bio, ciudad, peli_fav')
 
     const mapaPerfiles = new Map((profilesData || []).map((p: any) => [p.id, p]))
 
     function autorDe(autorId: string | null): User {
       if (autorId && mapaPerfiles.has(autorId)) {
         const p = mapaPerfiles.get(autorId)
-        return { id: p.id, nombre: p.nombre || p.username || 'Usuario', username: p.username || 'usuario', avatar: p.avatar || '🦇', bio: p.bio || '', ciudad: p.ciudad || '' }
+        return { id: p.id, nombre: p.nombre || p.username || 'Usuario', username: p.username || 'usuario', avatar: p.avatar || '🦇', bio: p.bio || '', ciudad: p.ciudad || '', peli_fav: p.peli_fav || '' }
       }
-      return { id: 'u1', nombre: 'Lii Méndez', username: 'lii', avatar: '🦇', bio: '', ciudad: '' }
+      return { id: 'u1', nombre: 'Lii Méndez', username: 'lii', avatar: '🦇', bio: '', ciudad: '', peli_fav: '' }
     }
 
     const postsMapeados = (postsData || []).map((row: any) => ({
@@ -79,7 +78,6 @@ export function usePosts() {
     cargar()
   }, [])
 
-  // 👇 1 voto por persona: si ya votaste, te lo saca. Si no, te lo suma.
   async function votar(id: string) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {

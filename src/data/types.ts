@@ -6,7 +6,8 @@ export interface User {
   username: string
   avatar: string
   bio?: string
-ciudad?: string
+  ciudad?: string
+  peli_fav?: string
 }
 
 export interface Comentario {
