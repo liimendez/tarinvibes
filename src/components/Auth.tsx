@@ -6,7 +6,7 @@ export default function Auth({ onLogin }: { onLogin: () => void }) {
   const [password, setPassword] = useState('')
   const [username, setUsername] = useState('')
   const [nuevaPass, setNuevaPass] = useState('')
-  const [modo, setModo] = useState<'login' | 'registro' | 'forgot' | 'reset'>('login')
+  const [modo, setModo] = useState<'login' | 'registro' | 'forgot' | 'reset'>(() => window.location.hash.includes('type=recovery') ? 'reset' : 'login')
   const [msg, setMsg] = useState('')
 
   // Si el usuario viene del link del mail de recuperación, Supabase dispara PASSWORD_RECOVERY

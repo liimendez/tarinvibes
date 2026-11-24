@@ -1,4 +1,3 @@
-// fix url - forzar rebuild con la URL correcta de Supabase
 import { useEffect, useState } from 'react'
 import Auth from './components/Auth'
 import { supabase } from './lib/supabase'
@@ -15,6 +14,7 @@ function slugify(t: string) {
 export default function App() {
   const { posts, loading, votar, agregar, borrar, comentar } = usePosts()
   const [sesion, setSesion] = useState<any>(null)
+  const [isRecovery, setIsRecovery] = useState(() => window.location.hash.includes('type=recovery'))
   const [cat, setCat] = useState<string>('Todas')
   const [q, setQ] = useState('')
   const [titulo, setTitulo] = useState('')
@@ -24,7 +24,10 @@ export default function App() {
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSesion(data.session))
-    const { data: listener } = supabase.auth.onAuthStateChange((_e, s) => setSesion(s))
+    const { data: listener } = supabase.auth.onAuthStateChange((event, s) => {
+      if (event === 'PASSWORD_RECOVERY') setIsRecovery(true)
+      setSesion(s)
+    })
     return () => listener.subscription.unsubscribe()
   }, [])
 
@@ -53,6 +56,15 @@ export default function App() {
     agregar(nuevo)
     setTitulo('')
     setCuerpo('')
+  }
+
+  // Si venís del link del mail de recuperación, mostrá el form de cambiar contraseña, no el feed
+  if (isRecovery) {
+    return (
+      <div className="min-h-screen p-6">
+        <Auth onLogin={() => { setIsRecovery(false); window.location.hash = ''; window.location.reload() }} />
+      </div>
+    )
   }
 
   if (!sesion) {
@@ -108,7 +120,7 @@ export default function App() {
         </section>
       </main>
       <footer className="max-w-6xl mx-auto px-6 pb-8 text-center text-xs text-[#A78BFA]">
-       <p>TarinVibes — Homenaje no oficial a la comunidad, hecho con otras vibes. v2</p>
+        <p>TarinVibes — Homenaje no oficial a la comunidad, hecho con otras vibes.</p>
         <p>No afiliado a Taringa. Hecho por Lii Méndez para aprender React + TypeScript.</p>
       </footer>
     </div>
