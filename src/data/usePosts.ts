@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { Post, User } from './types'
+import type { Post, User, Categoria } from './types'
 import { supabase } from '../lib/supabase'
 
 export const USUARIOS: User[] = [
@@ -14,98 +14,149 @@ export function getUsuarioActual(): User {
   return USUARIOS[0]
 }
 
-
 export function usePosts() {
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(true)
 
-async function cargar() {
-  const { data: postsData, error } = await supabase
-    .from('posts')
-    .select('*')
-    .order('created_at', { ascending: false })
+  async function cargar() {
+    const { data: postsData, error } = await supabase
+      .from('posts')
+      .select('*')
+      .order('created_at', { ascending: false })
 
-  if (error) {
-    console.log('Error Supabase:', error)
+    if (error) {
+      console.log('Error Supabase:', error)
+      setLoading(false)
+      return
+    }
+
+    const { data: commentsData } = await supabase
+      .from('comments')
+      .select('*')
+      .order('created_at', { ascending: true })
+
+    // 👇 Traemos los perfiles reales para no mostrar siempre Lii Méndez
+    const { data: profilesData } = await supabase
+      .from('profiles')
+      .select('id, nombre, username, avatar')
+
+    const mapaPerfiles = new Map((profilesData || []).map((p: any) => [p.id, p]))
+
+    function autorDe(autorId: string | null): User {
+      if (autorId && mapaPerfiles.has(autorId)) {
+        const p = mapaPerfiles.get(autorId)
+        return { id: p.id, nombre: p.nombre || p.username || 'Usuario', username: p.username || 'usuario', avatar: p.avatar || '🦇' }
+      }
+      return { id: 'u1', nombre: 'Lii Méndez', username: 'lii', avatar: '🦇' }
+    }
+
+    const postsMapeados = (postsData || []).map((row: any) => ({
+      id: row.id,
+      titulo: row.titulo,
+      slug: row.slug,
+      cuerpo: row.cuerpo,
+      categoria: row.categoria,
+      tags: row.tags || [],
+      autor: autorDe(row.autor_id),
+      puntos: row.puntos || 0,
+      createdAt: row.created_at?.slice(0, 10) || '',
+      comentarios: (commentsData || [])
+        .filter((c: any) => c.post_id === row.id)
+        .map((c: any) => ({
+          id: c.id,
+          postId: c.post_id,
+          autor: autorDe(c.autor_id),
+          texto: c.texto,
+          createdAt: c.created_at?.slice(0, 10) || '',
+        })),
+    }))
+
+    setPosts(postsMapeados)
     setLoading(false)
-    return
   }
-
-  const { data: commentsData } = await supabase
-    .from('comments')
-    .select('*')
-    .order('created_at', { ascending: true })
-
-  const postsMapeados = (postsData || []).map((row: any) => ({
-    id: row.id,
-    titulo: row.titulo,
-    slug: row.slug,
-    cuerpo: row.cuerpo,
-    categoria: row.categoria,
-    tags: row.tags || [],
-    autor: { id: 'u1', nombre: 'Lii Méndez', username: 'lii', avatar: '🦇' },
-    puntos: row.puntos || 0,
-    createdAt: row.created_at?.slice(0, 10) || '',
-    comentarios: (commentsData || [])
-      .filter((c: any) => c.post_id === row.id)
-      .map((c: any) => ({
-        id: c.id,
-        postId: c.post_id,
-        autor: { id: 'u1', nombre: 'Lii Méndez', username: 'lii', avatar: '🦇' },
-        texto: c.texto,
-        createdAt: c.created_at?.slice(0, 10) || '',
-      })),
-  }))
-
-  setPosts(postsMapeados)
-  setLoading(false)
-}
 
   useEffect(() => {
     cargar()
   }, [])
 
+  // 👇 1 voto por persona: si ya votaste, te lo saca. Si no, te lo suma.
   async function votar(id: string) {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      alert('Tenés que entrar para votar')
+      return
+    }
     const post = posts.find(p => p.id === id)
     if (!post) return
-    const { error } = await supabase
-      .from('posts')
-      .update({ puntos: post.puntos + 1 })
-      .eq('id', id)
-    if (!error) cargar()
+
+    const { data: votoExistente } = await supabase
+      .from('votes')
+      .select('id')
+      .eq('post_id', id)
+      .eq('user_id', user.id)
+      .maybeSingle()
+
+    if (votoExistente) {
+      await supabase.from('votes').delete().eq('id', votoExistente.id)
+      await supabase.from('posts').update({ puntos: Math.max(0, post.puntos - 1) }).eq('id', id)
+    } else {
+      const { error } = await supabase.from('votes').insert({ post_id: id, user_id: user.id })
+      if (error) {
+        console.log('Error al votar:', error)
+        return
+      }
+      await supabase.from('posts').update({ puntos: post.puntos + 1 }).eq('id', id)
+    }
+    cargar()
   }
 
- async function agregar(p: Post) {
-  console.log('Intentando crear post:', p)
-  const { data, error } = await supabase.from('posts').insert({
-    titulo: p.titulo,
-    slug: p.slug,
-    cuerpo: p.cuerpo,
-    categoria: p.categoria,
-    tags: p.tags,
-    puntos: 0,
-  }).select()
+  async function agregar(p: Post) {
+    const { data: { user } } = await supabase.auth.getUser()
+    console.log('Intentando crear post:', p)
+    const { data, error } = await supabase.from('posts').insert({
+      titulo: p.titulo,
+      slug: p.slug,
+      cuerpo: p.cuerpo,
+      categoria: p.categoria,
+      tags: p.tags,
+      puntos: 0,
+      autor_id: user?.id || null,
+    }).select()
 
-  console.log('Resultado insert:', data, error)
-  if (error) {
-    alert('Error al crear post: ' + error.message)
-    return
+    console.log('Resultado insert:', data, error)
+    if (error) {
+      alert('Error al crear post: ' + error.message)
+      return
+    }
+    cargar()
   }
-  cargar()
-}
 
   async function borrar(id: string) {
+    if (!confirm('¿Borrar este post?')) return
     await supabase.from('posts').delete().eq('id', id)
     cargar()
   }
 
+  async function editar(id: string, datos: { titulo: string, cuerpo: string, categoria: Categoria }) {
+    // Actualizar en pantalla al toque
+    setPosts(prev => prev.map(p => p.id === id ? { ...p, ...datos } : p))
+    // Guardar en Supabase
+    await supabase.from('posts').update({
+      titulo: datos.titulo,
+      cuerpo: datos.cuerpo,
+      categoria: datos.categoria,
+    }).eq('id', id)
+  }
+
   async function comentar(postId: string, texto: string) {
+    const { data: { user } } = await supabase.auth.getUser()
     await supabase.from('comments').insert({
       post_id: postId,
       texto,
+      autor_id: user?.id || null,
     })
     cargar()
   }
 
-  return { posts, loading, votar, agregar, borrar, comentar, recargar: cargar }
+  return { posts, loading, votar, agregar, borrar, comentar, editar }
 }
