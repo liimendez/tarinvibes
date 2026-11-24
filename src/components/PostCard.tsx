@@ -1,6 +1,9 @@
 import { useState } from 'react'
 import type { Post, Categoria } from '../data/types'
 
+
+
+
 type Props = {
   post: Post
   onVote: () => void
@@ -8,10 +11,12 @@ type Props = {
   onComentar: (texto: string) => void
   onEditar?: (datos: { titulo: string, cuerpo: string, categoria: Categoria }) => void
   onTagClick?: (tag: string) => void
+  onAbrirPost?: () => void
+  onAbrirUsuario?: () => void
   isOwner?: boolean
 }
 
-export default function PostCard({ post, onVote, onDelete, onComentar, onEditar, onTagClick, isOwner }: Props) {
+export default function PostCard({ post, onVote, onDelete, onComentar, onEditar, onTagClick, onAbrirPost, isOwner }: Props) {
   const [texto, setTexto] = useState('')
   const [abierto, setAbierto] = useState(false)
   const [editando, setEditando] = useState(false)
@@ -64,7 +69,7 @@ export default function PostCard({ post, onVote, onDelete, onComentar, onEditar,
           </div>
         ) : (
           <>
-            <h3 className="text-lg font-bold mt-1">{post.titulo}</h3>
+            <h3 onClick={onAbrirPost} className="text-lg font-bold mt-1 cursor-pointer hover:text-[#FF8A00]">{post.titulo}</h3>
             <p className="text-sm text-[#A78BFA]">
               {post.autor.avatar} {post.autor.nombre} @{post.autor.username} · {post.createdAt}
             </p>
