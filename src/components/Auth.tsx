@@ -6,11 +6,15 @@ export default function Auth({ onLogin }: { onLogin: () => void }) {
   const [password, setPassword] = useState('')
   const [username, setUsername] = useState('')
   const [nuevaPass, setNuevaPass] = useState('')
+  const [mostrarPass, setMostrarPass] = useState(false)
+  const [mostrarNuevaPass, setMostrarNuevaPass] = useState(false)
   const [modo, setModo] = useState<'login' | 'registro' | 'forgot' | 'reset'>(() => window.location.hash.includes('type=recovery') ? 'reset' : 'login')
   const [msg, setMsg] = useState('')
 
-  // Si el usuario viene del link del mail de recuperación, Supabase dispara PASSWORD_RECOVERY
   useEffect(() => {
+    if (window.location.hash.includes('otp_expired')) {
+      setMsg('El link expiró o ya se usó. Pedí un link nuevo de recuperación.')
+    }
     const { data: listener } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'PASSWORD_RECOVERY') {
         setModo('reset')
@@ -79,14 +83,17 @@ export default function Auth({ onLogin }: { onLogin: () => void }) {
         {modo === 'login' ? 'Iniciá sesión para postear' : modo === 'registro' ? 'Creá tu cuenta' : modo === 'forgot' ? 'Recuperá tu contraseña' : 'Cambiar contraseña'}
       </p>
 
-      {/* FORM DE CAMBIAR CONTRASEÑA (cuando viene del link del mail) */}
       {modo === 'reset' ? (
         <form onSubmit={cambiarPass} className="space-y-3">
-          <input type="password" value={nuevaPass} onChange={e => setNuevaPass(e.target.value)} placeholder="Nueva contraseña" className="w-full bg-[#0B0714] border border-[#3B2A66] rounded-xl p-3" />
+          <div className="relative">
+            <input type={mostrarNuevaPass ? 'text' : 'password'} value={nuevaPass} onChange={e => setNuevaPass(e.target.value)} placeholder="Nueva contraseña" className="w-full bg-[#0B0714] border border-[#3B2A66] rounded-xl p-3 pr-12" />
+            <button type="button" onClick={() => setMostrarNuevaPass(!mostrarNuevaPass)} className="absolute right-3 top-1/2 -translate-y-1/2 text-xl" title={mostrarNuevaPass ? 'Ocultar contraseña' : 'Mostrar contraseña'}>
+              {mostrarNuevaPass ? '🙈' : '👁️'}
+            </button>
+          </div>
           <button className="w-full bg-violet-600 p-3 rounded-xl font-bold">Cambiar contraseña</button>
         </form>
       ) : modo === 'forgot' ? (
-        /* FORM DE OLVIDÉ MI CONTRASEÑA */
         <form onSubmit={recuperar} className="space-y-3">
           <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Tu email" className="w-full bg-[#0B0714] border border-[#3B2A66] rounded-xl p-3" />
           <button className="w-full bg-violet-600 p-3 rounded-xl font-bold">Enviar link de recuperación</button>
@@ -95,25 +102,28 @@ export default function Auth({ onLogin }: { onLogin: () => void }) {
           </button>
         </form>
       ) : (
-        /* FORM DE LOGIN / REGISTRO (tu código original) */
         <form onSubmit={enviar} className="space-y-3">
           {modo === 'registro' && (
             <input value={username} onChange={e => setUsername(e.target.value)} placeholder="Tu username, ej: lii" className="w-full bg-[#0B0714] border border-[#3B2A66] rounded-xl p-3" />
           )}
           <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Email" className="w-full bg-[#0B0714] border border-[#3B2A66] rounded-xl p-3" />
-          <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Contraseña" className="w-full bg-[#0B0714] border border-[#3B2A66] rounded-xl p-3" />
+          {/* 👇 ACÁ ESTÁ EL OJITO */}
+          <div className="relative">
+            <input type={mostrarPass ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} placeholder="Contraseña" className="w-full bg-[#0B0714] border border-[#3B2A66] rounded-xl p-3 pr-12" />
+            <button type="button" onClick={() => setMostrarPass(!mostrarPass)} className="absolute right-3 top-1/2 -translate-y-1/2 text-xl" title={mostrarPass ? 'Ocultar contraseña' : 'Mostrar contraseña'}>
+              {mostrarPass ? '🙈' : '👁️'}
+            </button>
+          </div>
           <button className="w-full bg-violet-600 p-3 rounded-xl font-bold">{modo === 'login' ? 'Entrar' : 'Crear cuenta'}</button>
         </form>
       )}
 
-      {/* Botón para cambiar entre Login y Registro (solo en login/registro) */}
       {(modo === 'login' || modo === 'registro') && (
         <button onClick={() => { setModo(modo === 'login' ? 'registro' : 'login'); setMsg('') }} className="text-sm text-[#A78BFA] mt-3 w-full">
           {modo === 'login' ? '¿No tenés cuenta? Registrate' : '¿Ya tenés cuenta? Iniciá sesión'}
         </button>
       )}
 
-      {/* solo aparece cuando pones credencial incorrecta */}
       {modo === 'login' && msg.startsWith('Error') && (
         <div className="mt-4 bg-[#FF8A00]/10 border border-[#FF8A00] rounded-xl p-3 text-center">
           <p className="text-sm">¿Has olvidado tu contraseña?</p>
