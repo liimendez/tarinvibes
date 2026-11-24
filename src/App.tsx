@@ -86,6 +86,23 @@ export default function App() {
     setVista('usuario')
     window.scrollTo(0, 0)
   }
+async function abrirMiPerfil() {
+  const { data } = await supabase
+    .from('profiles')
+    .select('id, nombre, username, avatar')
+    .eq('id', sesion?.user?.id)
+    .maybeSingle()
+
+  if (data) {
+    abrirUsuario({ id: data.id, nombre: data.nombre, username: data.username, avatar: data.avatar })
+  } else {
+    // Fallback si todavía no tiene perfil
+    const yo = posts.find(p => p.autor.id === sesion?.user?.id)?.autor || { id: sesion?.user?.id, nombre: sesion?.user?.email?.split('@')[0] || 'Yo', username: sesion?.user?.email?.split('@')[0] || 'yo', avatar: '🦇' }
+    abrirUsuario(yo)
+  }
+}
+
+
 
   function volverFeed() {
     setVista('feed')
@@ -119,7 +136,10 @@ export default function App() {
           </button>
         </div>
         <div className="flex gap-2 items-center">
-          <span className="bg-[#2E1065] border border-[#8B5CF6] px-3 py-1 rounded-full text-sm">{sesion.user.email}</span>
+
+<button onClick={abrirMiPerfil} className="bg-[#2E1065] border border-[#8B5CF6] px-3 py-1 rounded-full text-sm hover:bg-violet-600">👤 Mi perfil</button>
+
+<span className="bg-[#2E1065] border border-[#8B5CF6] px-3 py-1 rounded-full text-sm hidden sm:inline">{sesion.user.email}</span>
           <button onClick={() => supabase.auth.signOut()} className="bg-red-500/20 border border-red-500 px-3 py-1 rounded-full text-sm">Salir</button>
         </div>
       </header>
@@ -156,12 +176,14 @@ export default function App() {
 
           {vista === 'usuario' && usuarioSeleccionado && (
             <UserPanel
-              usuario={usuarioSeleccionado}
-              posts={posts}
-              onVolver={volverFeed}
-              onAbrirPost={abrirPost}
-              onTagClick={(tag) => { setTagFiltro(tag); setVista('feed') }}
-            />
+                    usuario={usuarioSeleccionado}
+                    posts={posts}
+                    isOwn={usuarioSeleccionado.id === sesion?.user?.id}
+                    onVolver={volverFeed}
+                    onAbrirPost={abrirPost}
+                    onTagClick={(tag) => { setTagFiltro(tag); setVista('feed') }}
+                    onPerfilActualizado={() => window.location.reload()}
+                  />    
           )}
 
           {vista === 'feed' && (
