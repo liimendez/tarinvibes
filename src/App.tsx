@@ -126,7 +126,7 @@ export default function App() {
           )}
 
           {loading ? <p className="text-[#A78BFA]">Cargando comunidad...</p> : filtrados.length === 0 ? <p className="bg-[#171029] p-4 rounded-2xl">Sin posts. ¡Creá el primero!</p> : filtrados.map(p => (
-            <PostCard key={p.id} post={p} onVote={() => votar(p.id)} onDelete={() => borrar(p.id)} onComentar={(texto) => comentar(p.id, texto)} onEditar={(datos) => editar(p.id, datos)} onTagClick={(tag) => setTagFiltro(tag)} />
+            <PostCard key={p.id} post={p} onVote={() => votar(p.id)} onDelete={() => borrar(p.id)} onComentar={(texto) => comentar(p.id, texto)} onEditar={(datos) => editar(p.id, datos)} onTagClick={(tag) => setTagFiltro(tag)} isOwner={p.autor.id === sesion?.user?.id} />
           ))}
         </section>
       </main>

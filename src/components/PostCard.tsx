@@ -8,9 +8,10 @@ type Props = {
   onComentar: (texto: string) => void
   onEditar?: (datos: { titulo: string, cuerpo: string, categoria: Categoria }) => void
   onTagClick?: (tag: string) => void
+  isOwner?: boolean
 }
 
-export default function PostCard({ post, onVote, onDelete, onComentar, onEditar, onTagClick }: Props) {
+export default function PostCard({ post, onVote, onDelete, onComentar, onEditar, onTagClick, isOwner }: Props) {
   const [texto, setTexto] = useState('')
   const [abierto, setAbierto] = useState(false)
   const [editando, setEditando] = useState(false)
@@ -89,16 +90,18 @@ export default function PostCard({ post, onVote, onDelete, onComentar, onEditar,
           </div>
         )}
 
-        <div className="flex gap-3 mt-2">
-          {onEditar && (
-            <button onClick={() => setEditando(true)} className="text-xs text-[#A78BFA] block">
-              ✏️ Editar
+        {isOwner && (
+          <div className="flex gap-3 mt-2">
+            {onEditar && (
+              <button onClick={() => setEditando(true)} className="text-xs text-[#A78BFA] block">
+                ✏️ Editar
+              </button>
+            )}
+            <button onClick={onDelete} className="text-xs text-red-300 block">
+              Borrar
             </button>
-          )}
-          <button onClick={onDelete} className="text-xs text-red-300 block">
-            Borrar
-          </button>
-        </div>
+          </div>
+        )}
       </div>
     </article>
   )
