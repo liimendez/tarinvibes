@@ -89,12 +89,12 @@ export default function App() {
 async function abrirMiPerfil() {
   const { data } = await supabase
     .from('profiles')
-    .select('id, nombre, username, avatar')
+    .select('id, nombre, username, avatar, bio, ciudad, peli_fav')
     .eq('id', sesion?.user?.id)
     .maybeSingle()
 
   if (data) {
-    abrirUsuario({ id: data.id, nombre: data.nombre, username: data.username, avatar: data.avatar })
+    abrirUsuario({ id: data.id, nombre: data.nombre, username: data.username, avatar: data.avatar, bio: data.bio, ciudad: data.ciudad, peli_fav: data.peli_fav })
   } else {
     // Fallback si todavía no tiene perfil
     const yo = posts.find(p => p.autor.id === sesion?.user?.id)?.autor || { id: sesion?.user?.id, nombre: sesion?.user?.email?.split('@')[0] || 'Yo', username: sesion?.user?.email?.split('@')[0] || 'yo', avatar: '🦇' }
