@@ -2,40 +2,43 @@
 
 > La comunidad volvió, con otras vibes.
 
-Homenaje no oficial a la comunidad estilo Taringa, construido desde cero para aprender React + TypeScript.
+Red social en progreso con React + TypeScript + Supabase.
 
-**No afiliado a Taringa.**
+**Demo en vivo:** https://tarinvibes.vercel.app
 
 ## ✨ Qué hace
 
-- **Feed de comunidad** con posts por categoría
-- **Crear post** con título, cuerpo y categoría
-- **Votar** con puntos estilo Taringa (1 voto por usuario por post)
-- **Comentarios** en cada post, guardados
-- **Borrar** posts
+- **Auth real** con Supabase: registro, login, recuperar contraseña
+- **Perfiles editables:** nombre, username, avatar, bio, ciudad y película favorita
+- **Crear, editar y borrar posts** (solo el dueño puede editar / borrar)
+- **Comentarios** guardados en base de datos
+- **Votos:** 1 voto por persona, si votás de nuevo te lo saca
 - **Filtrar** por categoría: Música / Gatos / Tecnología / Humor / Vida / Gaming
+- **Filtrar por tags** clicables
 - **Buscar** por título
 - **Ordenar** por más recientes o más votados
-- **Login simulado** - cambiar entre Lii, Mica y Tomi
-- **Persistencia** con localStorage, como si fuera una base de datos
+- **Vista individual** de post y de usuario
 
 ## 🛠️ Stack
 
 - React + TypeScript + Vite
 - Tailwind CSS v4
-- localStorage como capa de datos
-- Arquitectura: `types` / `usePosts` (lógica) / `PostCard` (UI) / `App` (layout)
+- Supabase: Auth + PostgreSQL + RLS
+- Vercel para deploy
 
 ## 📁 Estructura
-
 src/
 data/
 types.ts -> Categoria, User, Post, Comentario
-usePosts.ts -> SEED, guardar, votar, agregar, borrar, comentar
+usePosts.ts -> cargar, votar, agregar, borrar, comentar, editar
 components/
-PostCard.tsx -> Tarjeta de cada post + comentarios
-App.tsx -> Layout, filtros, crear post, feed
-
+Auth.tsx -> login, registro, recuperar contraseña
+PostCard.tsx -> tarjeta de post + comentarios
+PostDetail.tsx -> vista individual de post
+UserPanel.tsx -> perfil de usuario
+App.tsx -> layout, filtros, crear post, feed
+lib/
+supabase.ts -> cliente de Supabase
 
 
 ## 🚀 Cómo correrlo
@@ -44,20 +47,13 @@ App.tsx -> Layout, filtros, crear post, feed
 npm install
 npm run dev
 
+Necesitás un archivo .env.local con:
 
-## 👩‍💻 Hecho por
+VITE_SUPABASE_URL=tu-url-de-supabase
+VITE_SUPABASE_ANON_KEY=tu-anon-key
 
-**Lii Méndez**
+👩‍💻 Hecho por
 
-
-
-
-
-
-
-
-
-
-
+Lii Méndez
 
 
