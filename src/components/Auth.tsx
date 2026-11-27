@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { Turnstile } from '@marsidev/react-turnstile'
 
 export default function Auth({ onLogin }: { onLogin: () => void }) {
   const [email, setEmail] = useState('')
@@ -10,6 +11,7 @@ export default function Auth({ onLogin }: { onLogin: () => void }) {
   const [mostrarNuevaPass, setMostrarNuevaPass] = useState(false)
   const [modo, setModo] = useState<'login' | 'registro' | 'forgot' | 'reset'>(() => window.location.hash.includes('type=recovery') ? 'reset' : 'login')
   const [msg, setMsg] = useState('')
+  const [captchaToken, setCaptchaToken] = useState('')
 
   useEffect(() => {
     if (window.location.hash.includes('otp_expired')) {
@@ -29,25 +31,21 @@ export default function Auth({ onLogin }: { onLogin: () => void }) {
     setMsg('Cargando...')
 
     if (modo === 'registro') {
-      // 1. Limpiamos el mail
       const emailLimpio = email.trim().toLowerCase()
       const usernameLimpio = username.trim()
 
-      // 2. ¿Tiene forma de mail real?
       const emailValido = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(emailLimpio)
       if (!emailValido) {
         setMsg('Poné un email real, tipo nombre@gmail.com')
         return
       }
 
-      // 3. ¿Es un mail temporal / descartable?
       const dominiosBasura = ['tempmail', '10minutemail', 'guerrillamail', 'mailinator', 'yopmail', 'temp-mail', 'throwaway', 'dispostable', 'getnada']
       if (dominiosBasura.some(d => emailLimpio.includes(d))) {
         setMsg('Usá un mail real, no uno temporal')
         return
       }
 
-      // 4. Username y contraseña
       if (!usernameLimpio || usernameLimpio.length < 3) {
         setMsg('Elegí un username de al menos 3 letras')
         return
@@ -57,26 +55,29 @@ export default function Auth({ onLogin }: { onLogin: () => void }) {
         return
       }
 
+      if (!captchaToken) {
+        setMsg('Verificá que no sos un robot')
+        return
+      }
+
       setEmail(emailLimpio)
 
-      // 5. Ahora sí, mandamos a Supabase
       const { data, error } = await supabase.auth.signUp({
         email: emailLimpio,
         password,
         options: {
-          data: { username: usernameLimpio }
+          data: { username: usernameLimpio },
+          captchaToken: captchaToken
         }
       })
       if (error) { setMsg('Error: ' + error.message); return }
 
-      // 6. CLAVE: Si todavía no confirmó el mail, NO le creamos el perfil todavía
       if (data.user && !data.user.email_confirmed_at) {
         setMsg('¡Casi listo! Te mandamos un mail para confirmar tu cuenta. Sin confirmar no podés entrar. Revisá bandeja y spam.')
         setModo('login')
         return
       }
 
-      // 7. Si ya estaba confirmado, recién ahí creamos perfil
       if (data.user) {
         await supabase.from('profiles').insert({
           id: data.user.id,
@@ -88,7 +89,6 @@ export default function Auth({ onLogin }: { onLogin: () => void }) {
         setModo('login')
       }
     } else {
-      // LOGIN: si es la primera vez que entra ya confirmado y no tiene perfil, se lo creamos acá
       const { data, error } = await supabase.auth.signInWithPassword({ email, password })
       if (error) { setMsg('Error: ' + error.message); return }
 
@@ -167,13 +167,24 @@ export default function Auth({ onLogin }: { onLogin: () => void }) {
             <input value={username} onChange={e => setUsername(e.target.value)} placeholder="Tu username, ej: lii" className="w-full bg-[#0B0714] border border-[#3B2A66] rounded-xl p-3" />
           )}
           <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Email" className="w-full bg-[#0B0714] border border-[#3B2A66] rounded-xl p-3" />
-          {/* 👇 ACÁ ESTÁ EL OJITO */}
           <div className="relative">
             <input type={mostrarPass ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} placeholder="Contraseña" className="w-full bg-[#0B0714] border border-[#3B2A66] rounded-xl p-3 pr-12" />
             <button type="button" onClick={() => setMostrarPass(!mostrarPass)} className="absolute right-3 top-1/2 -translate-y-1/2 text-xl" title={mostrarPass ? 'Ocultar contraseña' : 'Mostrar contraseña'}>
               {mostrarPass ? '🙈' : '👁'}
             </button>
           </div>
+
+          {modo === 'registro' && (
+            <div className="flex justify-center">
+              <Turnstile
+                siteKey="0x4AAAAAAGV6l93uag97toxIWCe4MhpJ2Sc"
+                onSuccess={(token: string) => setCaptchaToken(token)}
+                onExpire={() => setCaptchaToken('')}
+                onError={() => setCaptchaToken('')}
+              />
+            </div>
+          )}
+
           <button className="w-full bg-violet-600 p-3 rounded-xl font-bold">{modo === 'login' ? 'Entrar' : 'Crear cuenta'}</button>
         </form>
       )}
