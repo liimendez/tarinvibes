@@ -18,6 +18,7 @@ export interface Comentario {
   createdAt: string
   reacciones?: Record<string, number>
   miReaccion?: string | null
+  parentId?: string | null
 }
 
 export interface Post {

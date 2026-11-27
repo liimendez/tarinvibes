@@ -7,7 +7,7 @@ type Props = {
   onVolver: () => void
   onVote: () => void
   onDelete: () => void
-  onComentar: (texto: string) => void
+  onComentar: (texto: string, parentId?: string | null) => void
   onEditar: (datos: { titulo: string, cuerpo: string, categoria: Categoria, descripcion?: string, imagen_url?: string | null }) => void
   onTagClick?: (tag: string) => void
   onAbrirUsuario: (autor: Post['autor']) => void
@@ -16,7 +16,7 @@ type Props = {
 
 const REACCIONES = [
   { emoji: '👍', tipo: 'like' },
-  { emoji: '❤️', tipo: 'love' },
+  { emoji: '❤', tipo: 'love' },
   { emoji: '😂', tipo: 'haha' },
   { emoji: '😮', tipo: 'wow' },
   { emoji: '😢', tipo: 'sad' },
@@ -32,12 +32,17 @@ export default function PostDetail({ post, isOwner, onVolver, onVote, onDelete, 
   const [catEdit, setCatEdit] = useState<Categoria>(post.categoria)
   const [descripcionEdit, setDescripcionEdit] = useState(post.descripcion || '')
   const [imagenEdit, setImagenEdit] = useState(post.imagen_url || '')
+  const [respondiendoA, setRespondiendoA] = useState<string | null>(null)
+  const [textoRespuesta, setTextoRespuesta] = useState('')
 
   function formatearFecha(fecha: string) {
     const d = new Date(fecha)
     if (isNaN(d.getTime())) return fecha
     return d.toLocaleString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
   }
+
+  const comentariosPadre = (post.comentarios || []).filter(c => !c.parentId)
+  const respuestasDe = (parentId: string) => (post.comentarios || []).filter(c => c.parentId === parentId)
 
   return (
     <div className="space-y-4 max-w-5xl mx-auto w-full">
@@ -50,7 +55,6 @@ export default function PostDetail({ post, isOwner, onVolver, onVote, onDelete, 
               <img src={post.imagen_url} alt={post.titulo} className="w-72 h-48 object-contain bg-black rounded-xl border border-[#3B2A66]" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
             </div>
           )}
-
           <div className="flex-1 min-w-0">
             <div className="flex gap-2 flex-wrap">
               <span className="bg-[#2E1065] px-2 py-0.5 rounded-full text-xs">{post.categoria}</span>
@@ -58,7 +62,6 @@ export default function PostDetail({ post, isOwner, onVolver, onVote, onDelete, 
                 <button key={t} onClick={() => onTagClick?.(t)} className="text-xs text-[#FF8A00] bg-[#FF8A00]/10 border border-[#FF8A00]/30 px-2 py-0.5 rounded-full hover:bg-[#FF8A00] hover:text-black">#{t}</button>
               ))}
             </div>
-
             {editando ? (
               <div className="space-y-2 mt-3">
                 <input value={tituloEdit} onChange={e => setTituloEdit(e.target.value)} placeholder="Título" className="w-full bg-[#0B0714] border border-[#3B2A66] rounded-xl p-3" />
@@ -94,7 +97,6 @@ export default function PostDetail({ post, isOwner, onVolver, onVote, onDelete, 
             )}
           </div>
         </div>
-
         {!editando && (
           <div className="px-6 pb-6 border-t border-[#3B2A66] pt-4">
             <p className="whitespace-pre-wrap leading-relaxed">{post.cuerpo}</p>
@@ -104,29 +106,55 @@ export default function PostDetail({ post, isOwner, onVolver, onVote, onDelete, 
 
       <div className="bg-[#171029] border border-[#3B2A66] rounded-2xl p-4">
         <h3 className="font-bold">💬 {post.comentarios?.length || 0} comentarios</h3>
-        <div className="space-y-2 mt-3">
-          {post.comentarios?.map(c => (
-            <div key={c.id} className="bg-[#0B0714] p-3 rounded-xl">
-              <button onClick={() => onAbrirUsuario(c.autor)} className="text-sm font-bold hover:text-[#FF8A00]">{c.autor.avatar} {c.autor.nombre} <span className="text-[#A78BFA] font-normal">@{c.autor.username}</span></button>
-              <p className="text-sm mt-1">{c.texto}</p>
-              <p className="text-xs text-[#A78BFA]">{formatearFecha(c.createdAt)}</p>
-
-              <div className="flex gap-1 mt-2 flex-wrap">
-                {REACCIONES.map(r => {
-                  const cantidad = c.reacciones?.[r.tipo] || 0
-                  const activa = c.miReaccion === r.tipo
-                  return (
-                    <button
-                      key={r.tipo}
-                      onClick={() => onReaccionarComentario?.(c.id, r.tipo)}
-                      className={`text-xs px-2 py-1 rounded-full flex gap-1 items-center font-bold ${activa ? 'bg-violet-600 text-white border border-violet-400' : cantidad > 0 ? 'bg-violet-600/30 text-violet-200 border border-violet-500' : 'bg-[#171029] border border-[#3B2A66] hover:bg-[#2E1065]'}`}
-                    >
-                      <span>{r.emoji}</span>
-                      {cantidad > 0 && <span>{cantidad}</span>}
-                    </button>
-                  )
-                })}
+        <div className="space-y-3 mt-3">
+          {comentariosPadre.map(c => (
+            <div key={c.id} className="space-y-2">
+              <div className="bg-[#0B0714] p-3 rounded-xl">
+                <button onClick={() => onAbrirUsuario(c.autor)} className="text-sm font-bold hover:text-[#FF8A00]">{c.autor.avatar} {c.autor.nombre} <span className="text-[#A78BFA] font-normal">@{c.autor.username}</span></button>
+                <p className="text-sm mt-1">{c.texto}</p>
+                <p className="text-xs text-[#A78BFA]">{formatearFecha(c.createdAt)}</p>
+                <div className="flex gap-1 mt-2 flex-wrap">
+                  {REACCIONES.map(r => {
+                    const cantidad = c.reacciones?.[r.tipo] || 0
+                    const activa = c.miReaccion === r.tipo
+                    return (
+                      <button key={r.tipo} onClick={() => onReaccionarComentario?.(c.id, r.tipo)} className={`text-xs px-2 py-1 rounded-full flex gap-1 items-center font-bold ${activa ? 'bg-violet-600 text-white border border-violet-400' : cantidad > 0 ? 'bg-violet-600/30 text-violet-200 border border-violet-500' : 'bg-[#171029] border border-[#3B2A66] hover:bg-[#2E1065]'}`}>
+                        <span>{r.emoji}</span>
+                        {cantidad > 0 && <span>{cantidad}</span>}
+                      </button>
+                    )
+                  })}
+                  <button onClick={() => { setRespondiendoA(respondiendoA === c.id ? null : c.id); setTextoRespuesta('') }} className="text-xs px-2 py-1 rounded-full bg-[#171029] border border-[#3B2A66] hover:bg-[#2E1065]">
+                    ↩ Responder
+                  </button>
+                </div>
+                {respondiendoA === c.id && (
+                  <div className="flex gap-2 mt-2">
+                    <input value={textoRespuesta} onChange={e => setTextoRespuesta(e.target.value)} placeholder={`Respondiendo a @${c.autor.username}...`} className="flex-1 bg-[#171029] border border-[#3B2A66] rounded-xl p-2 text-sm" />
+                    <button onClick={() => { if (textoRespuesta.trim()) { onComentar(textoRespuesta, c.id); setTextoRespuesta(''); setRespondiendoA(null) } }} className="bg-violet-600 px-3 rounded-xl text-sm font-bold">Enviar</button>
+                  </div>
+                )}
               </div>
+
+              {respuestasDe(c.id).map(r => (
+                <div key={r.id} className="bg-[#0B0714]/60 p-3 rounded-xl ml-8 border-l-2 border-violet-500">
+                  <button onClick={() => onAbrirUsuario(r.autor)} className="text-sm font-bold hover:text-[#FF8A00]">{r.autor.avatar} {r.autor.nombre} <span className="text-[#A78BFA] font-normal">@{r.autor.username}</span></button>
+                  <p className="text-sm mt-1">{r.texto}</p>
+                  <p className="text-xs text-[#A78BFA]">{formatearFecha(r.createdAt)}</p>
+                  <div className="flex gap-1 mt-2 flex-wrap">
+                    {REACCIONES.map(re => {
+                      const cantidad = r.reacciones?.[re.tipo] || 0
+                      const activa = r.miReaccion === re.tipo
+                      return (
+                        <button key={re.tipo} onClick={() => onReaccionarComentario?.(r.id, re.tipo)} className={`text-xs px-2 py-1 rounded-full flex gap-1 items-center font-bold ${activa ? 'bg-violet-600 text-white border border-violet-400' : cantidad > 0 ? 'bg-violet-600/30 text-violet-200 border border-violet-500' : 'bg-[#171029] border border-[#3B2A66] hover:bg-[#2E1065]'}`}>
+                          <span>{re.emoji}</span>
+                          {cantidad > 0 && <span>{cantidad}</span>}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              ))}
             </div>
           ))}
         </div>

@@ -511,7 +511,7 @@ export default function App() {
               onVolver={volverFeed}
               onVote={() => votar(postSeleccionado.id)}
               onDelete={() => { borrar(postSeleccionado.id); volverFeed() }}
-              onComentar={(texto) => comentar(postSeleccionado.id, texto)}
+              onComentar={(texto, parentId) => comentar(postSeleccionado.id, texto, parentId)}
               onEditar={(datos) => editar(postSeleccionado.id, datos)}
               onTagClick={(tag) => { setTagFiltro(tag); setVista('feed') }}
               onAbrirUsuario={abrirUsuario}
@@ -630,7 +630,7 @@ export default function App() {
               {loading ? <p className="text-[#A78BFA]">Cargando comunidad...</p> : filtrados.length === 0 && !comunidadFiltro && !soloSeguidos ? <p className="bg-[#171029] p-4 rounded-2xl">{orden === 'top' ? 'Todavía nadie votó ningún post. ¡Sé el primero en votar con 🔥!' : 'Sin posts. ¡Creá el primero!'}</p> : (
                 <div className="grid lg:grid-cols-2 gap-4 items-start">
                   {filtrados.map(p => (
-                    <PostCard key={p.id} post={p} onVote={() => votar(p.id)} onDelete={() => borrar(p.id)} onComentar={(texto) => comentar(p.id, texto)} onEditar={(datos) => editar(p.id, datos)} onTagClick={(tag) => setTagFiltro(tag)} isOwner={p.autor.id === sesion?.user?.id} onAbrirPost={() => abrirPost(p)} onAbrirUsuario={() => abrirUsuario(p.autor)} />
+                    <PostCard key={p.id} post={p} onVote={() => votar(p.id)} onDelete={() => borrar(p.id)} onComentar={(texto, parentId) => comentar(p.id, texto, parentId)} onEditar={(datos) => editar(p.id, datos)} onTagClick={(tag) => setTagFiltro(tag)} isOwner={p.autor.id === sesion?.user?.id} onAbrirPost={() => abrirPost(p)} onAbrirUsuario={() => abrirUsuario(p.autor)} />
                   ))}
                 </div>
               )}

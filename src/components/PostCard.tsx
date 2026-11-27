@@ -5,7 +5,7 @@ type Props = {
   post: Post
   onVote: () => void
   onDelete: () => void
-  onComentar: (texto: string) => void
+  onComentar: (texto: string, parentId?: string | null) => void
   onEditar?: (datos: { titulo: string, cuerpo: string, categoria: Categoria, descripcion?: string, imagen_url?: string | null }) => void
   onTagClick?: (tag: string) => void
   onAbrirPost?: () => void
@@ -22,6 +22,8 @@ export default function PostCard({ post, onVote, onDelete, onComentar, onEditar,
   const [catEdit, setCatEdit] = useState<Categoria>(post.categoria)
   const [descripcionEdit, setDescripcionEdit] = useState(post.descripcion || '')
   const [imagenEdit, setImagenEdit] = useState(post.imagen_url || '')
+  const [respondiendoA, setRespondiendoA] = useState<string | null>(null)
+  const [textoRespuesta, setTextoRespuesta] = useState('')
 
   const descripcion = post.descripcion || (post.cuerpo ? post.cuerpo.slice(0, 140) + (post.cuerpo.length > 140 ? '...' : '') : '')
 
@@ -36,6 +38,9 @@ export default function PostCard({ post, onVote, onDelete, onComentar, onEditar,
     onEditar?.({ titulo: tituloEdit, cuerpo: cuerpoEdit, categoria: catEdit, descripcion: descripcionEdit, imagen_url: imagenEdit || null })
     setEditando(false)
   }
+
+  const comentariosPadre = (post.comentarios || []).filter(c => !c.parentId)
+  const respuestasDe = (parentId: string) => (post.comentarios || []).filter(c => c.parentId === parentId)
 
   return (
     <article onClick={() => { if (!editando) onAbrirPost?.() }} className="bg-[#171029] border border-[#3B2A66] rounded-2xl overflow-hidden cursor-pointer hover:border-violet-500 transition flex flex-col h-full">
@@ -52,16 +57,16 @@ export default function PostCard({ post, onVote, onDelete, onComentar, onEditar,
             ▲
           </button>
           <b className="text-sm">{post.puntos}</b>
-          <span className="text- text-[#A78BFA]">puntos</span>
+          <span className="text-xs text-[#A78BFA]">puntos</span>
         </div>
 
         <div className="flex-1 min-w-0">
           <div className="flex gap-1.5 flex-wrap" onClick={(e) => e.stopPropagation()}>
-            <span className="bg-[#2E1065] px-2 py-0.5 rounded-full text-">
+            <span className="bg-[#2E1065] px-2 py-0.5 rounded-full text-xs">
               {post.categoria}
             </span>
             {post.tags.map((t) => (
-              <button key={t} onClick={() => onTagClick?.(t)} className="text- text-[#FF8A00] bg-[#FF8A00]/10 border border-[#FF8A00]/30 px-2 py-0.5 rounded-full hover:bg-[#FF8A00] hover:text-black" title={`Filtrar por #${t}`}>
+              <button key={t} onClick={() => onTagClick?.(t)} className="text-xs text-[#FF8A00] bg-[#FF8A00]/10 border border-[#FF8A00]/30 px-2 py-0.5 rounded-full hover:bg-[#FF8A00] hover:text-black" title={`Filtrar por #${t}`}>
                 #{t}
               </button>
             ))}
@@ -84,26 +89,42 @@ export default function PostCard({ post, onVote, onDelete, onComentar, onEditar,
             </div>
           ) : (
             <>
-              <h3 className="text- leading-tight font-bold mt-1 hover:text-[#FF8A00] line-clamp-2">{post.titulo}</h3>
+              <h3 className="text-base leading-tight font-bold mt-1 hover:text-[#FF8A00] line-clamp-2">{post.titulo}</h3>
               <p className="text-xs text-[#A78BFA] mt-0.5" onClick={(e) => { e.stopPropagation(); onAbrirUsuario?.() }}>
                 <span className="cursor-pointer hover:underline">{post.autor.avatar} {post.autor.nombre} @{post.autor.username}</span> · {formatearFecha(post.createdAt)}
               </p>
-              <p className="text- mt-1.5 text-white/80 line-clamp-2 leading-snug">{descripcion}</p>
-              <p className="text- text-violet-300 mt-1">Ver post completo →</p>
+              <p className="text-sm mt-1.5 text-white/80 line-clamp-2 leading-snug">{descripcion}</p>
+              <p className="text-xs text-violet-300 mt-1">Ver post completo →</p>
             </>
           )}
 
           <div onClick={(e) => e.stopPropagation()}>
-            <button onClick={() => setAbierto(!abierto)} className="text- text-[#A78BFA] mt-1.5 block">
+            <button onClick={() => setAbierto(!abierto)} className="text-sm text-[#A78BFA] mt-1.5 block">
               💬 {post.comentarios?.length || 0} comentarios
             </button>
 
             {abierto && (
               <div className="mt-2 space-y-2">
-                {post.comentarios?.map(c => (
-                  <p key={c.id} className="bg-[#0B0714] p-2 rounded-xl text-sm">
-                    <b>{c.autor.avatar} {c.autor.nombre}</b> · {c.texto}
-                  </p>
+                {comentariosPadre.map(c => (
+                  <div key={c.id} className="space-y-1">
+                    <div className="bg-[#0B0714] p-2 rounded-xl text-sm">
+                      <b>{c.autor.avatar} {c.autor.nombre}</b> · {c.texto}
+                      <button onClick={() => { setRespondiendoA(respondiendoA === c.id ? null : c.id); setTextoRespuesta('') }} className="text-xs text-[#A78BFA] block mt-1 hover:text-[#FF8A00]">
+                        ↩ Responder
+                      </button>
+                      {respondiendoA === c.id && (
+                        <div className="flex gap-2 mt-2">
+                          <input value={textoRespuesta} onChange={e => setTextoRespuesta(e.target.value)} placeholder={`Respondiendo a @${c.autor.username}...`} className="flex-1 bg-[#171029] border border-[#3B2A66] rounded-xl p-2 text-sm" />
+                          <button onClick={() => { if (textoRespuesta.trim()) { onComentar(textoRespuesta, c.id); setTextoRespuesta(''); setRespondiendoA(null) } }} className="bg-violet-600 px-3 rounded-xl text-sm font-bold">Enviar</button>
+                        </div>
+                      )}
+                    </div>
+                    {respuestasDe(c.id).map(r => (
+                      <p key={r.id} className="bg-[#0B0714]/60 p-2 rounded-xl text-sm ml-6 border-l-2 border-violet-500">
+                        <b>{r.autor.avatar} {r.autor.nombre}</b> · {r.texto}
+                      </p>
+                    ))}
+                  </div>
                 ))}
                 <div className="flex gap-2">
                   <input value={texto} onChange={e => setTexto(e.target.value)} placeholder="Escribí un comentario..." className="flex-1 bg-[#0B0714] border border-[#3B2A66] rounded-xl p-2 text-sm" />
@@ -115,11 +136,11 @@ export default function PostCard({ post, onVote, onDelete, onComentar, onEditar,
             {isOwner && (
               <div className="flex gap-3 mt-1.5">
                 {onEditar && (
-                  <button onClick={() => setEditando(true)} className="text- text-[#A78BFA] block">
+                  <button onClick={() => setEditando(true)} className="text-xs text-[#A78BFA] block">
                     ✏ Editar
                   </button>
                 )}
-                <button onClick={onDelete} className="text- text-red-300 block">
+                <button onClick={onDelete} className="text-xs text-red-300 block">
                   Borrar
                 </button>
               </div>

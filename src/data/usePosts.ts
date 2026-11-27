@@ -86,6 +86,7 @@ export function usePosts() {
             autor: autorDe(c.autor_id),
             texto: c.texto,
             createdAt: c.created_at || '',
+            parentId: c.parent_id || null,
             reacciones: conteo,
             miReaccion: reaccionesDeEste.find((r: any) => r.user_id === usuarioActual?.id)?.tipo || null,
           }
@@ -218,7 +219,7 @@ export function usePosts() {
     }).eq('id', id)
   }
 
-  async function comentar(postId: string, texto: string) {
+  async function comentar(postId: string, texto: string, parentId?: string | null) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
       alert('Tenés que entrar para comentar')
@@ -229,6 +230,7 @@ export function usePosts() {
       post_id: postId,
       texto,
       autor_id: user?.id || null,
+      parent_id: parentId || null,
     })
     if (error) {
       console.log('Error al comentar:', error)
@@ -243,7 +245,7 @@ export function usePosts() {
         de_nombre: yo.nombre,
         de_avatar: yo.avatar,
         tipo: 'comentario',
-        accion: 'comentó en tu post 💬',
+        accion: parentId ? 'te respondió un comentario 💬' : 'comentó en tu post 💬',
         detalle: `“${texto.slice(0, 60)}”`,
         post_id: postId,
       })
@@ -302,7 +304,7 @@ export function usePosts() {
       const yo = await miPerfil(user.id)
       const post = posts.find(p => p.id === comentario.post_id)
       const emojiPorTipo: Record<string, string> = {
-        like: '👍', love: '❤️', haha: '😂', wow: '😮', sad: '😢', angry: '😡', dislike: '👎'
+        like: '👍', love: '❤', haha: '😂', wow: '😮', sad: '😢', angry: '😡', dislike: '👎'
       }
       await crearNotificacion({
         para_usuario_id: comentario.autor_id,
@@ -310,7 +312,7 @@ export function usePosts() {
         de_nombre: yo.nombre,
         de_avatar: yo.avatar,
         tipo: 'reaccion_comentario',
-        accion: `reaccionó a tu comentario ${emojiPorTipo[tipo] || '❤️'}`,
+        accion: `reaccionó a tu comentario ${emojiPorTipo[tipo] || '❤'}`,
         detalle: `“${(comentario.texto || '').slice(0, 60)}” ${post ? `en “${post.titulo}”` : ''}`,
         post_id: comentario.post_id,
       })
