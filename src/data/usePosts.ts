@@ -35,6 +35,12 @@ export function usePosts() {
       .select('*')
       .order('created_at', { ascending: true })
 
+    const { data: reactionsData } = await supabase
+      .from('comment_reactions')
+      .select('*')
+
+    const { data: { user: usuarioActual } } = await supabase.auth.getUser()
+
     const { data: profilesData } = await supabase
       .from('profiles')
       .select('id, nombre, username, avatar, bio, ciudad, peli_fav')
@@ -64,13 +70,22 @@ export function usePosts() {
       createdAt: row.created_at || '',
       comentarios: (commentsData || [])
         .filter((c: any) => c.post_id === row.id)
-        .map((c: any) => ({
-          id: c.id,
-          postId: c.post_id,
-          autor: autorDe(c.autor_id),
-          texto: c.texto,
-          createdAt: c.created_at || '',
-        })),
+        .map((c: any) => {
+          const reaccionesDeEste = (reactionsData || []).filter((r: any) => r.comment_id === c.id)
+          const conteo: Record<string, number> = {}
+          reaccionesDeEste.forEach((r: any) => {
+            conteo[r.tipo] = (conteo[r.tipo] || 0) + 1
+          })
+          return {
+            id: c.id,
+            postId: c.post_id,
+            autor: autorDe(c.autor_id),
+            texto: c.texto,
+            createdAt: c.created_at || '',
+            reacciones: conteo,
+            miReaccion: reaccionesDeEste.find((r: any) => r.user_id === usuarioActual?.id)?.tipo || null,
+          }
+        }),
     }))
 
     setPosts(postsMapeados)
@@ -81,7 +96,6 @@ export function usePosts() {
     cargar()
   }, [])
 
-  // Helper: trae nombre y avatar de quien está haciendo la acción
   async function miPerfil(userId: string) {
     const { data } = await supabase
       .from('profiles')
@@ -94,7 +108,6 @@ export function usePosts() {
     }
   }
 
-  // Helper: crea la notificación real en Supabase, sin avisarme a mi mismo
   async function crearNotificacion(params: {
     para_usuario_id: string
     de_usuario_id: string
@@ -139,7 +152,6 @@ export function usePosts() {
     if (votoExistente) {
       await supabase.from('votes').delete().eq('id', votoExistente.id)
       await supabase.from('posts').update({ puntos: Math.max(0, post.puntos - 1) }).eq('id', id)
-      // Si saca el voto, no mandamos notificación
     } else {
       const { error } = await supabase.from('votes').insert({ post_id: id, user_id: user.id })
       if (error) {
@@ -148,7 +160,6 @@ export function usePosts() {
       }
       await supabase.from('posts').update({ puntos: post.puntos + 1 }).eq('id', id)
 
-      // NOTIFICACION REAL DE VOTO
       const yo = await miPerfil(user.id)
       await crearNotificacion({
         para_usuario_id: post.autor.id,
@@ -166,7 +177,6 @@ export function usePosts() {
 
   async function agregar(p: Post) {
     const { data: { user } } = await supabase.auth.getUser()
-    console.log('Intentando crear post:', p)
     const { data, error } = await supabase.from('posts').insert({
       titulo: p.titulo,
       slug: p.slug,
@@ -180,7 +190,6 @@ export function usePosts() {
       comunidad_id: p.comunidad_id || null,
     }).select()
 
-    console.log('Resultado insert:', data, error)
     if (error) {
       alert('Error al crear post: ' + error.message)
       return
@@ -222,7 +231,6 @@ export function usePosts() {
       return
     }
 
-    // NOTIFICACION REAL DE COMENTARIO
     if (post) {
       const yo = await miPerfil(user.id)
       await crearNotificacion({
@@ -240,5 +248,35 @@ export function usePosts() {
     cargar()
   }
 
-  return { posts, loading, votar, agregar, borrar, comentar, editar }
+  async function reaccionarComentario(commentId: string, tipo: string) {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      alert('Tenés que entrar para reaccionar')
+      return
+    }
+
+    const { data: existente } = await supabase
+      .from('comment_reactions')
+      .select('id, tipo')
+      .eq('comment_id', commentId)
+      .eq('user_id', user.id)
+      .maybeSingle()
+
+    if (existente) {
+      if (existente.tipo === tipo) {
+        await supabase.from('comment_reactions').delete().eq('id', existente.id)
+      } else {
+        await supabase.from('comment_reactions').update({ tipo }).eq('id', existente.id)
+      }
+    } else {
+      await supabase.from('comment_reactions').insert({
+        comment_id: commentId,
+        user_id: user.id,
+        tipo,
+      })
+    }
+    cargar()
+  }
+
+  return { posts, loading, votar, agregar, borrar, comentar, editar, reaccionarComentario }
 }

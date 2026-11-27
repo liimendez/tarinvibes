@@ -16,6 +16,8 @@ export interface Comentario {
   autor: User
   texto: string
   createdAt: string
+  reacciones?: Record<string, number>
+  miReaccion?: string | null
 }
 
 export interface Post {

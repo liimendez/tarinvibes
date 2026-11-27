@@ -11,9 +11,20 @@ type Props = {
   onEditar: (datos: { titulo: string, cuerpo: string, categoria: Categoria, descripcion?: string, imagen_url?: string | null }) => void
   onTagClick?: (tag: string) => void
   onAbrirUsuario: (autor: Post['autor']) => void
+  onReaccionarComentario?: (commentId: string, tipo: string) => void
 }
 
-export default function PostDetail({ post, isOwner, onVolver, onVote, onDelete, onComentar, onEditar, onTagClick, onAbrirUsuario }: Props) {
+const REACCIONES = [
+  { emoji: '👍', tipo: 'like' },
+  { emoji: '❤️', tipo: 'love' },
+  { emoji: '😂', tipo: 'haha' },
+  { emoji: '😮', tipo: 'wow' },
+  { emoji: '😢', tipo: 'sad' },
+  { emoji: '😡', tipo: 'angry' },
+  { emoji: '👎', tipo: 'dislike' },
+]
+
+export default function PostDetail({ post, isOwner, onVolver, onVote, onDelete, onComentar, onEditar, onTagClick, onAbrirUsuario, onReaccionarComentario }: Props) {
   const [texto, setTexto] = useState('')
   const [editando, setEditando] = useState(false)
   const [tituloEdit, setTituloEdit] = useState(post.titulo)
@@ -33,7 +44,6 @@ export default function PostDetail({ post, isOwner, onVolver, onVote, onDelete, 
       <button onClick={onVolver} className="text-sm text-[#A78BFA]">← Volver al feed</button>
 
       <article className="bg-[#171029] border border-[#3B2A66] rounded-2xl overflow-hidden">
-        {/* SECCION 1: Portada - foto chica entera + titulo */}
         <div className="p-5 flex flex-col sm:flex-row gap-5">
           {post.imagen_url && !editando && (
             <div className="shrink-0 mx-auto sm:mx-0">
@@ -85,7 +95,6 @@ export default function PostDetail({ post, isOwner, onVolver, onVote, onDelete, 
           </div>
         </div>
 
-        {/* SECCION 2: Contenido ancho */}
         {!editando && (
           <div className="px-6 pb-6 border-t border-[#3B2A66] pt-4">
             <p className="whitespace-pre-wrap leading-relaxed">{post.cuerpo}</p>
@@ -93,7 +102,6 @@ export default function PostDetail({ post, isOwner, onVolver, onVote, onDelete, 
         )}
       </article>
 
-      {/* SECCION 3: Comentarios */}
       <div className="bg-[#171029] border border-[#3B2A66] rounded-2xl p-4">
         <h3 className="font-bold">💬 {post.comentarios?.length || 0} comentarios</h3>
         <div className="space-y-2 mt-3">
@@ -102,6 +110,23 @@ export default function PostDetail({ post, isOwner, onVolver, onVote, onDelete, 
               <button onClick={() => onAbrirUsuario(c.autor)} className="text-sm font-bold hover:text-[#FF8A00]">{c.autor.avatar} {c.autor.nombre} <span className="text-[#A78BFA] font-normal">@{c.autor.username}</span></button>
               <p className="text-sm mt-1">{c.texto}</p>
               <p className="text-xs text-[#A78BFA]">{formatearFecha(c.createdAt)}</p>
+
+              <div className="flex gap-1 mt-2 flex-wrap">
+                {REACCIONES.map(r => {
+                  const cantidad = c.reacciones?.[r.tipo] || 0
+                  const activa = c.miReaccion === r.tipo
+                  return (
+                    <button
+                      key={r.tipo}
+                      onClick={() => onReaccionarComentario?.(c.id, r.tipo)}
+                      className={`text-xs px-2 py-1 rounded-full flex gap-1 items-center ${activa ? 'bg-violet-600 text-white' : 'bg-[#171029] border border-[#3B2A66] hover:bg-[#2E1065]'}`}
+                    >
+                      <span>{r.emoji}</span>
+                      {cantidad > 0 && <span>{cantidad}</span>}
+                    </button>
+                  )
+                })}
+              </div>
             </div>
           ))}
         </div>

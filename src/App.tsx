@@ -35,7 +35,7 @@ type MensajeChat = {
 }
 
 export default function App() {
-  const { posts, loading, votar, agregar, borrar, comentar, editar } = usePosts()
+  const { posts, loading, votar, agregar, borrar, comentar, editar, reaccionarComentario } = usePosts()
   const [sesion, setSesion] = useState<any>(null)
   const [isRecovery, setIsRecovery] = useState(() => window.location.hash.includes('type=recovery'))
   const [q, setQ] = useState('')
@@ -422,6 +422,7 @@ export default function App() {
               onEditar={(datos) => editar(postSeleccionado.id, datos)}
               onTagClick={(tag) => { setTagFiltro(tag); setVista('feed') }}
               onAbrirUsuario={abrirUsuario}
+              onReaccionarComentario={(commentId, tipo) => reaccionarComentario(commentId, tipo)}
             />
           )}
 
