@@ -38,30 +38,30 @@ export default function PostCard({ post, onVote, onDelete, onComentar, onEditar,
   }
 
   return (
-    <article onClick={() => { if (!editando) onAbrirPost?.() }} className="bg-[#171029] border border-[#3B2A66] rounded-2xl overflow-hidden cursor-pointer hover:border-violet-500 transition">
+    <article onClick={() => { if (!editando) onAbrirPost?.() }} className="bg-[#171029] border border-[#3B2A66] rounded-2xl overflow-hidden cursor-pointer hover:border-violet-500 transition flex flex-col h-full">
       {post.imagen_url && !editando && (
-        <img src={post.imagen_url} alt={post.titulo} className="w-full h-48 object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
+        <img src={post.imagen_url} alt={post.titulo} className="w-full h-36 object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
       )}
 
-      <div className="p-4 flex gap-3">
-        <div className="flex flex-col items-center gap-1" onClick={(e) => e.stopPropagation()}>
+      <div className="p-3 flex gap-2 flex-1">
+        <div className="flex flex-col items-center gap-0.5" onClick={(e) => e.stopPropagation()}>
           <button
             onClick={onVote}
-            className="bg-[#2E1065] w-9 h-9 rounded-full font-bold hover:bg-[#FF8A00] hover:text-black"
+            className="bg-[#2E1065] w-8 h-8 rounded-full font-bold text-sm hover:bg-[#FF8A00] hover:text-black"
           >
             ▲
           </button>
-          <b>{post.puntos}</b>
-          <span className="text-xs text-[#A78BFA]">puntos</span>
+          <b className="text-sm">{post.puntos}</b>
+          <span className="text- text-[#A78BFA]">puntos</span>
         </div>
 
         <div className="flex-1 min-w-0">
-          <div className="flex gap-2 flex-wrap" onClick={(e) => e.stopPropagation()}>
-            <span className="bg-[#2E1065] px-2 py-0.5 rounded-full text-xs">
+          <div className="flex gap-1.5 flex-wrap" onClick={(e) => e.stopPropagation()}>
+            <span className="bg-[#2E1065] px-2 py-0.5 rounded-full text-">
               {post.categoria}
             </span>
             {post.tags.map((t) => (
-              <button key={t} onClick={() => onTagClick?.(t)} className="text-xs text-[#FF8A00] bg-[#FF8A00]/10 border border-[#FF8A00]/30 px-2 py-0.5 rounded-full hover:bg-[#FF8A00] hover:text-black" title={`Filtrar por #${t}`}>
+              <button key={t} onClick={() => onTagClick?.(t)} className="text- text-[#FF8A00] bg-[#FF8A00]/10 border border-[#FF8A00]/30 px-2 py-0.5 rounded-full hover:bg-[#FF8A00] hover:text-black" title={`Filtrar por #${t}`}>
                 #{t}
               </button>
             ))}
@@ -72,7 +72,7 @@ export default function PostCard({ post, onVote, onDelete, onComentar, onEditar,
               <input value={tituloEdit} onChange={e => setTituloEdit(e.target.value)} placeholder="Título" className="w-full bg-[#0B0714] border border-[#3B2A66] rounded-xl p-2 text-sm" />
               <input value={descripcionEdit} onChange={e => setDescripcionEdit(e.target.value)} placeholder="Breve descripción (lo que se ve en la tarjeta)" maxLength={160} className="w-full bg-[#0B0714] border border-[#3B2A66] rounded-xl p-2 text-sm" />
               <input value={imagenEdit} onChange={e => setImagenEdit(e.target.value)} placeholder="Link de imagen (opcional)" className="w-full bg-[#0B0714] border border-[#3B2A66] rounded-xl p-2 text-sm" />
-              {imagenEdit && <img src={imagenEdit} alt="preview" className="w-full h-32 object-cover rounded-xl" />}
+              {imagenEdit && <img src={imagenEdit} alt="preview" className="w-full h-28 object-cover rounded-xl" />}
               <select value={catEdit} onChange={e => setCatEdit(e.target.value as Categoria)} className="w-full bg-[#0B0714] border border-[#3B2A66] rounded-xl p-2 text-sm">
                 {['Música', 'Gatos', 'Tecnología', 'Humor', 'Vida', 'Gaming'].map(c => <option key={c}>{c}</option>)}
               </select>
@@ -84,22 +84,22 @@ export default function PostCard({ post, onVote, onDelete, onComentar, onEditar,
             </div>
           ) : (
             <>
-              <h3 className="text-lg font-bold mt-1 hover:text-[#FF8A00]">{post.titulo}</h3>
-              <p className="text-sm text-[#A78BFA]" onClick={(e) => { e.stopPropagation(); onAbrirUsuario?.() }}>
+              <h3 className="text- leading-tight font-bold mt-1 hover:text-[#FF8A00] line-clamp-2">{post.titulo}</h3>
+              <p className="text-xs text-[#A78BFA] mt-0.5" onClick={(e) => { e.stopPropagation(); onAbrirUsuario?.() }}>
                 <span className="cursor-pointer hover:underline">{post.autor.avatar} {post.autor.nombre} @{post.autor.username}</span> · {formatearFecha(post.createdAt)}
               </p>
-              <p className="text-sm mt-2 text-white/80 line-clamp-2">{descripcion}</p>
-              <p className="text-xs text-violet-300 mt-1">Ver post completo →</p>
+              <p className="text- mt-1.5 text-white/80 line-clamp-2 leading-snug">{descripcion}</p>
+              <p className="text- text-violet-300 mt-1">Ver post completo →</p>
             </>
           )}
 
           <div onClick={(e) => e.stopPropagation()}>
-            <button onClick={() => setAbierto(!abierto)} className="text-xs text-[#A78BFA] mt-2 block">
+            <button onClick={() => setAbierto(!abierto)} className="text- text-[#A78BFA] mt-1.5 block">
               💬 {post.comentarios?.length || 0} comentarios
             </button>
 
             {abierto && (
-              <div className="mt-3 space-y-2">
+              <div className="mt-2 space-y-2">
                 {post.comentarios?.map(c => (
                   <p key={c.id} className="bg-[#0B0714] p-2 rounded-xl text-sm">
                     <b>{c.autor.avatar} {c.autor.nombre}</b> · {c.texto}
@@ -113,13 +113,13 @@ export default function PostCard({ post, onVote, onDelete, onComentar, onEditar,
             )}
 
             {isOwner && (
-              <div className="flex gap-3 mt-2">
+              <div className="flex gap-3 mt-1.5">
                 {onEditar && (
-                  <button onClick={() => setEditando(true)} className="text-xs text-[#A78BFA] block">
+                  <button onClick={() => setEditando(true)} className="text- text-[#A78BFA] block">
                     ✏ Editar
                   </button>
                 )}
-                <button onClick={onDelete} className="text-xs text-red-300 block">
+                <button onClick={onDelete} className="text- text-red-300 block">
                   Borrar
                 </button>
               </div>

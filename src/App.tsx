@@ -32,6 +32,7 @@ export default function App() {
   const [usuarioSeleccionado, setUsuarioSeleccionado] = useState<User | null>(null)
   const { comunidades, unirse, salir } = useComunidades()
   const [comunidadFiltro, setComunidadFiltro] = useState<string>('')
+  const [mostrarForm, setMostrarForm] = useState(false)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSesion(data.session))
@@ -58,7 +59,6 @@ export default function App() {
     )
     .sort((a, b) => orden === 'top' ? b.puntos - a.puntos : new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
 
-  // Total real de la comunidad, sin el filtro de "Más votados"
   const totalEnComunidad = comunidadFiltro ? posts.filter(p => p.comunidad_id === comunidadFiltro).length : posts.length
 
   function elegirComunidad(id: string) {
@@ -91,6 +91,7 @@ export default function App() {
     setImagenUrl('')
     setCuerpo('')
     setTagsTexto('')
+    setMostrarForm(false)
   }
 
   function abrirPost(p: Post) {
@@ -146,27 +147,26 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen">
-      <header className="flex justify-between items-center p-6 max-w-6xl mx-auto">
-        <div>
+    <div className="min-h-screen flex flex-col">
+      <header className="w-full max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
+        <div className="flex-1 text-left">
           <button onClick={volverFeed} className="text-left">
             <div className="flex items-center gap-2">
- 
-  <h1 className="text-3xl font-black">Tarin<span className="text-[#FF8A00]">Vibes</span></h1>
-   <img src="/logo.png" alt="TarinVibes" className="w-14 h-14 object-contain drop-shadow-[0_0_10px_rgba(139,92,246,0.8)] -ml-1" />
-</div>
+              <h1 className="text-3xl font-black">Tarin<span className="text-[#FF8A00]">Vibes</span></h1>
+              <img src="/logo.png" alt="TarinVibes" className="w-14 h-14 object-contain drop-shadow-[0_0_10px_rgba(139,92,246,0.8)] -ml-1" />
+            </div>
             <p className="text-[#A78BFA]">La comunidad volvió, con otras vibes</p>
           </button>
         </div>
-        <div className="flex gap-2 items-center">
+        <div className="flex gap-2 items-center shrink-0 flex-wrap">
           <button onClick={abrirMiPerfil} className="bg-[#2E1065] border border-[#8B5CF6] px-3 py-1 rounded-full text-sm hover:bg-violet-600">👤 Mi perfil</button>
           <span className="bg-[#2E1065] border border-[#8B5CF6] px-3 py-1 rounded-full text-sm hidden sm:inline">{sesion.user.email}</span>
           <button onClick={() => supabase.auth.signOut()} className="bg-red-500/20 border border-red-500 px-3 py-1 rounded-full text-sm">Salir</button>
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-6 pb-10 grid md:grid-cols-[220px_1fr] gap-4">
-        <aside className="bg-[#171029] border border-[#3B2A66] rounded-2xl p-4 h-fit space-y-3">
+      <main className="max-w-7xl w-full mx-auto px-4 pb-10 flex flex-col md:grid md:grid-cols-[280px_1fr] gap-4 flex-1">
+        <aside className="bg-[#171029] border border-[#3B2A66] rounded-2xl p-4 h-fit space-y-3 order-2 md:order-none">
           <input value={q} onChange={e => setQ(e.target.value)} placeholder="Buscar..." className="w-full bg-[#0B0714] border border-[#3B2A66] rounded-xl p-2" />
           <select value={orden} onChange={e => setOrden(e.target.value as 'recientes' | 'top')} className="w-full bg-[#0B0714] border border-[#3B2A66] rounded-xl p-2">
             <option value="recientes">🕐 Más recientes</option>
@@ -191,7 +191,7 @@ export default function App() {
           )}
         </aside>
 
-        <section className="space-y-4">
+        <section className="space-y-4 order-1 md:order-none">
           {vista === 'post' && postSeleccionado && (
             <PostDetail
               post={postSeleccionado}
@@ -220,20 +220,32 @@ export default function App() {
 
           {vista === 'feed' && (
             <>
-              <form onSubmit={publicar} className="bg-[#171029] border border-[#3B2A66] rounded-2xl p-4 space-y-3">
-                <h2 className="font-bold">+ Crear post</h2>
-                <input value={titulo} onChange={e => setTitulo(e.target.value)} placeholder="Título del post *" className="w-full bg-[#0B0714] border border-[#3B2A66] rounded-xl p-3" />
-                <input value={descripcion} onChange={e => setDescripcion(e.target.value)} placeholder="Breve descripción (lo que se ve en la tarjeta)" maxLength={160} className="w-full bg-[#0B0714] border border-[#3B2A66] rounded-xl p-3" />
-                <input value={imagenUrl} onChange={e => setImagenUrl(e.target.value)} placeholder="Link de imagen (opcional) ej: https://..." className="w-full bg-[#0B0714] border border-[#3B2A66] rounded-xl p-3" />
-                {imagenUrl && <img src={imagenUrl} alt="preview" className="w-full h-40 object-cover rounded-xl border border-[#3B2A66]" />}
-                <select value={categoria} onChange={e => setCategoria(e.target.value as Categoria)} className="w-full bg-[#0B0714] border border-[#3B2A66] rounded-xl p-3">
-                  {CATEGORIAS.map(c => <option key={c}>{c}</option>)}
-                </select>
-                <input value={tagsTexto} onChange={e => setTagsTexto(e.target.value)} placeholder="Tags separados por coma, ej: thrash, gatos, dba" className="w-full bg-[#0B0714] border border-[#3B2A66] rounded-xl p-3" />
-                <textarea value={cuerpo} onChange={e => setCuerpo(e.target.value)} rows={4} placeholder="Escribí tu post... (contenido completo, se ve al hacer click)" className="w-full bg-[#0B0714] border border-[#3B2A66] rounded-xl p-3" />
-                <button className="bg-violet-600 px-4 py-2 rounded-xl font-bold">Publicar</button>
-                {comunidadFiltro && <p className="text-xs text-[#A78BFA]">Se va a publicar en: {comunidades.find(c => c.id === comunidadFiltro)?.nombre}</p>}
-              </form>
+              {!mostrarForm ? (
+                <button onClick={() => setMostrarForm(true)} className="w-full bg-violet-600 hover:bg-violet-500 px-4 py-3 rounded-2xl font-bold text-left">
+                  + Crear post ✍️
+                </button>
+              ) : (
+                <form onSubmit={publicar} className="bg-[#171029] border border-[#3B2A66] rounded-2xl p-4 space-y-3">
+                  <div className="flex justify-between items-center">
+                    <h2 className="font-bold">+ Crear post</h2>
+                    <button type="button" onClick={() => setMostrarForm(false)} className="text-xs text-[#A78BFA]">✕ Cerrar</button>
+                  </div>
+                  <input value={titulo} onChange={e => setTitulo(e.target.value)} placeholder="Título del post *" className="w-full bg-[#0B0714] border border-[#3B2A66] rounded-xl p-3" />
+                  <input value={descripcion} onChange={e => setDescripcion(e.target.value)} placeholder="Breve descripción (lo que se ve en la tarjeta)" maxLength={160} className="w-full bg-[#0B0714] border border-[#3B2A66] rounded-xl p-3" />
+                  <input value={imagenUrl} onChange={e => setImagenUrl(e.target.value)} placeholder="Link de imagen (opcional) ej: https://..." className="w-full bg-[#0B0714] border border-[#3B2A66] rounded-xl p-3" />
+                  {imagenUrl && <img src={imagenUrl} alt="preview" className="w-full h-40 object-cover rounded-xl border border-[#3B2A66]" />}
+                  <select value={categoria} onChange={e => setCategoria(e.target.value as Categoria)} className="w-full bg-[#0B0714] border border-[#3B2A66] rounded-xl p-3">
+                    {CATEGORIAS.map(c => <option key={c}>{c}</option>)}
+                  </select>
+                  <input value={tagsTexto} onChange={e => setTagsTexto(e.target.value)} placeholder="Tags separados por coma, ej: thrash, gatos, dba" className="w-full bg-[#0B0714] border border-[#3B2A66] rounded-xl p-3" />
+                  <textarea value={cuerpo} onChange={e => setCuerpo(e.target.value)} rows={4} placeholder="Escribí tu post... (contenido completo, se ve al hacer click)" className="w-full bg-[#0B0714] border border-[#3B2A66] rounded-xl p-3" />
+                  <div className="flex gap-2">
+                    <button className="bg-violet-600 px-4 py-2 rounded-xl font-bold">Publicar</button>
+                    <button type="button" onClick={() => setMostrarForm(false)} className="bg-[#2E1065] px-4 py-2 rounded-xl text-sm">Cancelar</button>
+                  </div>
+                  {comunidadFiltro && <p className="text-xs text-[#A78BFA]">Se va a publicar en: {comunidades.find(c => c.id === comunidadFiltro)?.nombre}</p>}
+                </form>
+              )}
 
               {comunidadFiltro && (() => {
                 const comu = comunidades.find(c => c.id === comunidadFiltro)
@@ -279,14 +291,18 @@ export default function App() {
                 </div>
               )}
 
-              {loading ? <p className="text-[#A78BFA]">Cargando comunidad...</p> : filtrados.length === 0 && !comunidadFiltro ? <p className="bg-[#171029] p-4 rounded-2xl">{orden === 'top' ? 'Todavía nadie votó ningún post. ¡Sé el primero en votar con 🔥!' : 'Sin posts. ¡Creá el primero!'}</p> : filtrados.map(p => (
-                <PostCard key={p.id} post={p} onVote={() => votar(p.id)} onDelete={() => borrar(p.id)} onComentar={(texto) => comentar(p.id, texto)} onEditar={(datos) => editar(p.id, datos)} onTagClick={(tag) => setTagFiltro(tag)} isOwner={p.autor.id === sesion?.user?.id} onAbrirPost={() => abrirPost(p)} onAbrirUsuario={() => abrirUsuario(p.autor)} />
-              ))}
+              {loading ? <p className="text-[#A78BFA]">Cargando comunidad...</p> : filtrados.length === 0 && !comunidadFiltro ? <p className="bg-[#171029] p-4 rounded-2xl">{orden === 'top' ? 'Todavía nadie votó ningún post. ¡Sé el primero en votar con 🔥!' : 'Sin posts. ¡Creá el primero!'}</p> : (
+                <div className="grid lg:grid-cols-2 gap-4 items-start">
+                  {filtrados.map(p => (
+                    <PostCard key={p.id} post={p} onVote={() => votar(p.id)} onDelete={() => borrar(p.id)} onComentar={(texto) => comentar(p.id, texto)} onEditar={(datos) => editar(p.id, datos)} onTagClick={(tag) => setTagFiltro(tag)} isOwner={p.autor.id === sesion?.user?.id} onAbrirPost={() => abrirPost(p)} onAbrirUsuario={() => abrirUsuario(p.autor)} />
+                  ))}
+                </div>
+              )}
             </>
           )}
         </section>
       </main>
-      <footer className="max-w-6xl mx-auto px-6 pb-8 text-center text-xs text-[#A78BFA]">
+      <footer className="max-w- w-full mx-auto px-6 py-6 mt-auto text-center text-xs text-[#A78BFA] border-t border-[#3B2A66]/50">
         <p>TarinVibes — Homenaje no oficial a la comunidad, hecho con otras vibes.</p>
         <p>No afiliado a Taringa. Hecho por Lii Méndez para aprender React + TypeScript.</p>
       </footer>
