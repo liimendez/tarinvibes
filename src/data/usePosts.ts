@@ -81,6 +81,45 @@ export function usePosts() {
     cargar()
   }, [])
 
+  // Helper: trae nombre y avatar de quien está haciendo la acción
+  async function miPerfil(userId: string) {
+    const { data } = await supabase
+      .from('profiles')
+      .select('nombre, username, avatar')
+      .eq('id', userId)
+      .maybeSingle()
+    return {
+      nombre: data?.nombre || data?.username || 'Alguien',
+      avatar: data?.avatar || '🦇',
+    }
+  }
+
+  // Helper: crea la notificación real en Supabase, sin avisarme a mi mismo
+  async function crearNotificacion(params: {
+    para_usuario_id: string
+    de_usuario_id: string
+    de_nombre: string
+    de_avatar: string
+    tipo: string
+    accion: string
+    detalle: string
+    post_id: string
+  }) {
+    if (!params.para_usuario_id) return
+    if (params.para_usuario_id === params.de_usuario_id) return
+    const { error } = await supabase.from('notificaciones').insert({
+      para_usuario_id: params.para_usuario_id,
+      de_usuario_id: params.de_usuario_id,
+      de_nombre: params.de_nombre,
+      de_avatar: params.de_avatar,
+      tipo: params.tipo,
+      accion: params.accion,
+      detalle: params.detalle,
+      post_id: params.post_id,
+    })
+    if (error) console.log('Error creando notificacion:', error)
+  }
+
   async function votar(id: string) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
@@ -100,6 +139,7 @@ export function usePosts() {
     if (votoExistente) {
       await supabase.from('votes').delete().eq('id', votoExistente.id)
       await supabase.from('posts').update({ puntos: Math.max(0, post.puntos - 1) }).eq('id', id)
+      // Si saca el voto, no mandamos notificación
     } else {
       const { error } = await supabase.from('votes').insert({ post_id: id, user_id: user.id })
       if (error) {
@@ -107,6 +147,19 @@ export function usePosts() {
         return
       }
       await supabase.from('posts').update({ puntos: post.puntos + 1 }).eq('id', id)
+
+      // NOTIFICACION REAL DE VOTO
+      const yo = await miPerfil(user.id)
+      await crearNotificacion({
+        para_usuario_id: post.autor.id,
+        de_usuario_id: user.id,
+        de_nombre: yo.nombre,
+        de_avatar: yo.avatar,
+        tipo: 'voto',
+        accion: 'te votó un post 🔥',
+        detalle: `“${post.titulo}”`,
+        post_id: id,
+      })
     }
     cargar()
   }
@@ -154,11 +207,36 @@ export function usePosts() {
 
   async function comentar(postId: string, texto: string) {
     const { data: { user } } = await supabase.auth.getUser()
-    await supabase.from('comments').insert({
+    if (!user) {
+      alert('Tenés que entrar para comentar')
+      return
+    }
+    const post = posts.find(p => p.id === postId)
+    const { error } = await supabase.from('comments').insert({
       post_id: postId,
       texto,
       autor_id: user?.id || null,
     })
+    if (error) {
+      console.log('Error al comentar:', error)
+      return
+    }
+
+    // NOTIFICACION REAL DE COMENTARIO
+    if (post) {
+      const yo = await miPerfil(user.id)
+      await crearNotificacion({
+        para_usuario_id: post.autor.id,
+        de_usuario_id: user.id,
+        de_nombre: yo.nombre,
+        de_avatar: yo.avatar,
+        tipo: 'comentario',
+        accion: 'comentó en tu post 💬',
+        detalle: `“${texto.slice(0, 60)}”`,
+        post_id: postId,
+      })
+    }
+
     cargar()
   }
 

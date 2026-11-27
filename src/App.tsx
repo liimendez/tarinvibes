@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import Auth from './components/Auth'
 import { supabase } from './lib/supabase'
 import { usePosts } from './data/usePosts'
+import { useNotificaciones } from './data/useNotificaciones'
 import type { Categoria, Post, User } from './data/types'
 import PostCard from './components/PostCard'
 import PostDetail from './components/PostDetail'
@@ -13,17 +14,6 @@ const CATEGORIAS: Categoria[] = ['Música', 'Gatos', 'Tecnología', 'Humor', 'Vi
 
 function slugify(t: string) {
   return t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
-}
-
-type Notificacion = {
-  id: string
-  avatar: string
-  nombre: string
-  accion: string
-  detalle: string
-  fecha: string
-  hace: string
-  leida: boolean
 }
 
 type Conversacion = {
@@ -42,12 +32,6 @@ type MensajeChat = {
   de: 'yo' | 'otro'
   texto: string
   hora: string
-}
-
-function bienvenidaParaUsuario(): Notificacion[] {
-  return [
-    { id: 'bienvenida', avatar: '🦇', nombre: 'TarinVibes', accion: 'te dio la bienvenida 🦇', detalle: '¡Publicá tu primer post!', fecha: 'Hoy', hace: 'ahora', leida: false }
-  ]
 }
 
 export default function App() {
@@ -71,9 +55,10 @@ export default function App() {
   const [mostrarForm, setMostrarForm] = useState(false)
   const [panel, setPanel] = useState<'ninguno' | 'notificaciones' | 'mensajes'>('ninguno')
 
-  // Empiezan vacios, se cargan por usuario cuando llega la sesion
-  const [notificaciones, setNotificaciones] = useState<Notificacion[]>([])
-  const [notificacionesSinLeer, setNotificacionesSinLeer] = useState(0)
+  // NOTIFICACIONES REALES DESDE SUPABASE
+  const { notificaciones, sinLeer: notificacionesSinLeer, marcarTodasLeidas } = useNotificaciones(sesion?.user?.id)
+
+  // MENSAJES - TODAVIA EN LOCALSTORAGE POR USUARIO
   const [conversaciones, setConversaciones] = useState<Conversacion[]>([])
   const [chats, setChats] = useState<Record<string, MensajeChat[]>>({})
   const [mensajesSinLeer, setMensajesSinLeer] = useState(0)
@@ -84,9 +69,6 @@ export default function App() {
     return localStorage.getItem('tarinvibes-tema') === 'claro' ? 'claro' : 'oscuro'
   })
 
-  function claveNotificaciones(userId?: string) {
-    return 'tarinvibes-notificaciones-' + (userId || sesion?.user?.id || 'invitado')
-  }
   function claveConversaciones(userId?: string) {
     return 'tarinvibes-conversaciones-' + (userId || sesion?.user?.id || 'invitado')
   }
@@ -104,12 +86,7 @@ export default function App() {
     setChatCon(null)
     setVista('feed')
     if (panel !== 'notificaciones') {
-      setNotificacionesSinLeer(0)
-      setNotificaciones(prev => {
-        const actualizadas = prev.map(n => ({ ...n, leida: true }))
-        localStorage.setItem(claveNotificaciones(), JSON.stringify(actualizadas))
-        return actualizadas
-      })
+      marcarTodasLeidas()
     }
     setPanel(panel === 'notificaciones' ? 'ninguno' : 'notificaciones')
   }
@@ -162,33 +139,10 @@ export default function App() {
     return () => listener.subscription.unsubscribe()
   }, [])
 
-  // CARGAR NOTIFICACIONES Y MENSAJES POR USUARIO - NO SE MEZCLAN
+  // CARGAR MENSAJES POR USUARIO
   useEffect(() => {
     if (!sesion?.user?.id) return
     const userId = sesion.user.id
-
-    const guardadasNoti = localStorage.getItem(claveNotificaciones(userId))
-    if (guardadasNoti) {
-      try {
-        const lista: Notificacion[] = JSON.parse(guardadasNoti)
-        // Limpia cualquier texto roto que haya quedado pegado de antes
-        const limpia = lista.map(n => ({
-          ...n,
-          detalle: n.detalle.replace('Megadeth', 'Megadeth'),
-          accion: n.accion.replace('Megadeth', 'Megadeth'),
-        }))
-        setNotificaciones(limpia)
-        setNotificacionesSinLeer(limpia.filter(n => !n.leida).length)
-      } catch {
-        setNotificaciones(bienvenidaParaUsuario())
-        setNotificacionesSinLeer(1)
-      }
-    } else {
-      const bienvenida = bienvenidaParaUsuario()
-      setNotificaciones(bienvenida)
-      setNotificacionesSinLeer(1)
-      localStorage.setItem(claveNotificaciones(userId), JSON.stringify(bienvenida))
-    }
 
     const guardadasConv = localStorage.getItem(claveConversaciones(userId))
     if (guardadasConv) {
@@ -372,7 +326,7 @@ export default function App() {
                 <button onClick={() => setPanel('ninguno')} className="text-xs text-[#A78BFA]">✕ Cerrar</button>
               </div>
               {notificaciones.length === 0 ? (
-                <p className="p-4 text-sm text-[#A78BFA]">Sin notificaciones por ahora</p>
+                <p className="p-4 text-sm text-[#A78BFA]">Sin notificaciones por ahora. Cuando alguien te vote o te comente, te aparece acá.</p>
               ) : (
                 <div className="divide-y divide-[#3B2A66]/60">
                   {notificaciones.map(n => (
@@ -389,7 +343,6 @@ export default function App() {
                   ))}
                 </div>
               )}
-              <p className="text-xs text-center text-[#A78BFA] p-3 border-t border-[#3B2A66]/60">Próximamente: notificaciones reales desde Supabase</p>
             </div>
           )}
 
