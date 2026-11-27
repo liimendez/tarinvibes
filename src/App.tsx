@@ -16,7 +16,6 @@ function slugify(t: string) {
   return t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
 }
 
-// --- MENSAJES ADENTRO DE APP.TSX PARA NO DEPENDER DE useMensajes.ts ---
 export type Conversacion = {
   id: string
   nombre: string
@@ -154,7 +153,6 @@ function useMensajes(miId?: string | null) {
 
   return { conversaciones, chats, usuarios, sinLeerTotal, enviarMensaje, marcarLeidos, iniciarChatCon, recargar: cargar }
 }
-// --- FIN MENSAJES ---
 
 export default function App() {
   const { posts, loading, votar, agregar, borrar, comentar, editar, reaccionarComentario } = usePosts()
@@ -167,6 +165,8 @@ export default function App() {
   const [cuerpo, setCuerpo] = useState('')
   const [categoria, setCategoria] = useState<Categoria>('Música')
   const [orden, setOrden] = useState<'recientes' | 'top'>('recientes')
+  const [soloSeguidos, setSoloSeguidos] = useState(false)
+  const [seguidosIds, setSeguidosIds] = useState<string[]>([])
   const [tagFiltro, setTagFiltro] = useState<string>('')
   const [tagsTexto, setTagsTexto] = useState('')
   const [vista, setVista] = useState<'feed' | 'post' | 'usuario'>('feed')
@@ -231,6 +231,18 @@ export default function App() {
   }, [])
 
   useEffect(() => {
+    async function cargarSeguidos() {
+      if (!sesion?.user?.id) return
+      const { data } = await supabase
+        .from('follows')
+        .select('seguido_id')
+        .eq('seguidor_id', sesion.user.id)
+      setSeguidosIds((data || []).map((f: any) => f.seguido_id))
+    }
+    cargarSeguidos()
+  }, [sesion?.user?.id])
+
+  useEffect(() => {
     if (postSeleccionado) {
       const actualizado = posts.find(p => p.id === postSeleccionado.id)
       if (actualizado) setPostSeleccionado(actualizado)
@@ -242,7 +254,8 @@ export default function App() {
       (!q || p.titulo.toLowerCase().includes(q.toLowerCase()) || p.descripcion?.toLowerCase().includes(q.toLowerCase())) &&
       (!tagFiltro || p.tags?.includes(tagFiltro)) &&
       (!comunidadFiltro || p.comunidad_id === comunidadFiltro) &&
-      (orden !== 'top' || p.puntos > 0)
+      (orden !== 'top' || p.puntos > 0) &&
+      (!soloSeguidos || seguidosIds.includes(p.autor.id))
     )
     .sort((a, b) => orden === 'top' ? b.puntos - a.puntos : new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
 
@@ -528,6 +541,15 @@ export default function App() {
 
           {!chatCon && vista === 'feed' && (
             <>
+              <div className="flex gap-2">
+                <button onClick={() => setSoloSeguidos(false)} className={soloSeguidos ? "bg-[#2E1065] px-4 py-2 rounded-full text-sm" : "bg-violet-600 px-4 py-2 rounded-full text-sm font-bold"}>
+                  🌍 Todos
+                </button>
+                <button onClick={() => setSoloSeguidos(true)} className={soloSeguidos ? "bg-violet-600 px-4 py-2 rounded-full text-sm font-bold" : "bg-[#2E1065] px-4 py-2 rounded-full text-sm"}>
+                  👥 Seguidos ({seguidosIds.length})
+                </button>
+              </div>
+
               {!mostrarForm ? (
                 <button onClick={() => setMostrarForm(true)} className="w-full bg-violet-600 hover:bg-violet-500 px-4 py-3 rounded-2xl font-bold text-left">
                   + Crear post ✍
@@ -599,7 +621,13 @@ export default function App() {
                 </div>
               )}
 
-              {loading ? <p className="text-[#A78BFA]">Cargando comunidad...</p> : filtrados.length === 0 && !comunidadFiltro ? <p className="bg-[#171029] p-4 rounded-2xl">{orden === 'top' ? 'Todavía nadie votó ningún post. ¡Sé el primero en votar con 🔥!' : 'Sin posts. ¡Creá el primero!'}</p> : (
+              {soloSeguidos && filtrados.length === 0 && (
+                <div className="bg-[#171029] border border-[#3B2A66] rounded-2xl p-4 text-sm text-[#A78BFA]">
+                  Todavía no hay posts de la gente que seguís. Seguí a más gente y volvé acá 💜
+                </div>
+              )}
+
+              {loading ? <p className="text-[#A78BFA]">Cargando comunidad...</p> : filtrados.length === 0 && !comunidadFiltro && !soloSeguidos ? <p className="bg-[#171029] p-4 rounded-2xl">{orden === 'top' ? 'Todavía nadie votó ningún post. ¡Sé el primero en votar con 🔥!' : 'Sin posts. ¡Creá el primero!'}</p> : (
                 <div className="grid lg:grid-cols-2 gap-4 items-start">
                   {filtrados.map(p => (
                     <PostCard key={p.id} post={p} onVote={() => votar(p.id)} onDelete={() => borrar(p.id)} onComentar={(texto) => comentar(p.id, texto)} onEditar={(datos) => editar(p.id, datos)} onTagClick={(tag) => setTagFiltro(tag)} isOwner={p.autor.id === sesion?.user?.id} onAbrirPost={() => abrirPost(p)} onAbrirUsuario={() => abrirUsuario(p.autor)} />
