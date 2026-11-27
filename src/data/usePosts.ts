@@ -181,7 +181,7 @@ export function usePosts() {
 
   async function agregar(p: Post) {
     const { data: { user } } = await supabase.auth.getUser()
-    const { data, error } = await supabase.from('posts').insert({
+    const { error } = await supabase.from('posts').insert({
       titulo: p.titulo,
       slug: p.slug,
       cuerpo: p.cuerpo,
