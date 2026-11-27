@@ -89,7 +89,15 @@ export default function Auth({ onLogin }: { onLogin: () => void }) {
         setModo('login')
       }
     } else {
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+      if (!captchaToken) {
+        setMsg('Verificá que no sos un robot')
+        return
+      }
+      const { data, error } = await supabase.auth.signInWithPassword({ 
+        email, 
+        password,
+        options: { captchaToken: captchaToken }
+      })
       if (error) { setMsg('Error: ' + error.message); return }
 
       if (data.user) {
@@ -115,8 +123,13 @@ export default function Auth({ onLogin }: { onLogin: () => void }) {
       setMsg('Poné tu email para recuperar tu contraseña')
       return
     }
+    if (!captchaToken) {
+      setMsg('Verificá que no sos un robot')
+      return
+    }
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: window.location.origin,
+      captchaToken: captchaToken
     })
     if (error) { setMsg('Error: ' + error.message); return }
     setMsg('¡Listo! Te mandamos un mail con el link para cambiar tu contraseña. Revisá tu bandeja y spam.')
@@ -156,6 +169,14 @@ export default function Auth({ onLogin }: { onLogin: () => void }) {
       ) : modo === 'forgot' ? (
         <form onSubmit={recuperar} className="space-y-3">
           <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Tu email" className="w-full bg-[#0B0714] border border-[#3B2A66] rounded-xl p-3" />
+          <div className="flex justify-center">
+            <Turnstile
+              siteKey="0x4AAAAAAGV6l3knBwZEFw0R"
+              onSuccess={(token: string) => setCaptchaToken(token)}
+              onExpire={() => setCaptchaToken('')}
+              onError={() => setCaptchaToken('')}
+            />
+          </div>
           <button className="w-full bg-violet-600 p-3 rounded-xl font-bold">Enviar link de recuperación</button>
           <button type="button" onClick={() => { setModo('login'); setMsg('') }} className="text-sm text-[#A78BFA] w-full">
             Volver a Entrar
@@ -174,16 +195,14 @@ export default function Auth({ onLogin }: { onLogin: () => void }) {
             </button>
           </div>
 
-          {modo === 'registro' && (
-            <div className="flex justify-center">
-              <Turnstile
-                siteKey="0x4AAAAAAGV6l3knBwZEFw0R"
-                onSuccess={(token: string) => setCaptchaToken(token)}
-                onExpire={() => setCaptchaToken('')}
-                onError={() => setCaptchaToken('')}
-              />
-            </div>
-          )}
+          <div className="flex justify-center">
+            <Turnstile
+              siteKey="0x4AAAAAAGV6l3knBwZEFw0R"
+              onSuccess={(token: string) => setCaptchaToken(token)}
+              onExpire={() => setCaptchaToken('')}
+              onError={() => setCaptchaToken('')}
+            />
+          </div>
 
           <button className="w-full bg-violet-600 p-3 rounded-xl font-bold">{modo === 'login' ? 'Entrar' : 'Crear cuenta'}</button>
         </form>
