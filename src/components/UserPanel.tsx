@@ -55,24 +55,41 @@ export default function UserPanel({ usuario, posts, isOwn, onVolver, onAbrirPost
     cargarFollows()
   }, [usuario.id])
 
-  async function toggleSeguir() {
-    if (!miId) return
-    if (loSigo) {
-      await supabase
-        .from('follows')
-        .delete()
-        .eq('seguidor_id', miId)
-        .eq('seguido_id', usuario.id)
-      setLoSigo(false)
-      setSeguidores(s => s - 1)
-    } else {
-      await supabase
-        .from('follows')
-        .insert({ seguidor_id: miId, seguido_id: usuario.id })
-      setLoSigo(true)
-      setSeguidores(s => s + 1)
-    }
+ async function toggleSeguir() {
+  if (!miId) return
+  if (loSigo) {
+    await supabase
+      .from('follows')
+      .delete()
+      .eq('seguidor_id', miId)
+      .eq('seguido_id', usuario.id)
+    setLoSigo(false)
+    setSeguidores(s => s - 1)
+  } else {
+    await supabase
+      .from('follows')
+      .insert({ seguidor_id: miId, seguido_id: usuario.id })
+    setLoSigo(true)
+    setSeguidores(s => s + 1)
+
+    // NUEVO: Notificación para el otro usuario
+    const { data: miPerfil } = await supabase
+      .from('profiles')
+      .select('nombre, username, avatar')
+      .eq('id', miId)
+      .single()
+
+    await supabase.from('notificaciones').insert({
+      para_usuario_id: usuario.id,
+      de_nombre: miPerfil?.nombre || miPerfil?.username || 'Alguien',
+      de_avatar: miPerfil?.avatar || '🦇',
+      accion: 'empezó a seguirte',
+      detalle: `@${miPerfil?.username || 'usuario'}`,
+      post_id: null,
+      leida: false
+    })
   }
+}
 
   return (
     <div className="space-y-4 max-w-5xl mx-auto w-full">
