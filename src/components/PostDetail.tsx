@@ -119,7 +119,7 @@ export default function PostDetail({ post, isOwner, onVolver, onVote, onDelete, 
                     <button
                       key={r.tipo}
                       onClick={() => onReaccionarComentario?.(c.id, r.tipo)}
-                      className={`text-xs px-2 py-1 rounded-full flex gap-1 items-center ${activa ? 'bg-violet-600 text-white' : 'bg-[#171029] border border-[#3B2A66] hover:bg-[#2E1065]'}`}
+                      className={`text-xs px-2 py-1 rounded-full flex gap-1 items-center font-bold ${activa ? 'bg-violet-600 text-white border border-violet-400' : cantidad > 0 ? 'bg-violet-600/30 text-violet-200 border border-violet-500' : 'bg-[#171029] border border-[#3B2A66] hover:bg-[#2E1065]'}`}
                     >
                       <span>{r.emoji}</span>
                       {cantidad > 0 && <span>{cantidad}</span>}

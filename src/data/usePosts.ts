@@ -259,7 +259,11 @@ export function usePosts() {
       return
     }
 
-    console.log('Reaccionando:', { commentId, tipo, userId: user.id })
+    const { data: comentario } = await supabase
+      .from('comments')
+      .select('post_id, autor_id, texto')
+      .eq('id', commentId)
+      .maybeSingle()
 
     const { data: existente, error: errorBuscar } = await supabase
       .from('comment_reactions')
@@ -274,8 +278,11 @@ export function usePosts() {
       return
     }
 
+    let esQuitar = false
+
     if (existente) {
       if (existente.tipo === tipo) {
+        esQuitar = true
         const { error } = await supabase.from('comment_reactions').delete().eq('id', existente.id)
         if (error) { alert('Error borrando reacción: ' + error.message); console.log(error); return }
       } else {
@@ -290,6 +297,25 @@ export function usePosts() {
       })
       if (error) { alert('Error guardando reacción: ' + error.message); console.log(error); return }
     }
+
+    if (!esQuitar && comentario && comentario.autor_id && comentario.autor_id !== user.id) {
+      const yo = await miPerfil(user.id)
+      const post = posts.find(p => p.id === comentario.post_id)
+      const emojiPorTipo: Record<string, string> = {
+        like: '👍', love: '❤️', haha: '😂', wow: '😮', sad: '😢', angry: '😡', dislike: '👎'
+      }
+      await crearNotificacion({
+        para_usuario_id: comentario.autor_id,
+        de_usuario_id: user.id,
+        de_nombre: yo.nombre,
+        de_avatar: yo.avatar,
+        tipo: 'reaccion_comentario',
+        accion: `reaccionó a tu comentario ${emojiPorTipo[tipo] || '❤️'}`,
+        detalle: `“${(comentario.texto || '').slice(0, 60)}” ${post ? `en “${post.titulo}”` : ''}`,
+        post_id: comentario.post_id,
+      })
+    }
+
     cargar()
   }
 
