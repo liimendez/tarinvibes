@@ -177,7 +177,7 @@ export default function Auth({ onLogin }: { onLogin: () => void }) {
           {modo === 'registro' && (
             <div className="flex justify-center">
               <Turnstile
-                siteKey="0x4AAAAAAGV6l93uag97toxIWCe4MhpJ2Sc"
+                siteKey="0x4AAAAAAGV6l3knBwZEFw0R"
                 onSuccess={(token: string) => setCaptchaToken(token)}
                 onExpire={() => setCaptchaToken('')}
                 onError={() => setCaptchaToken('')}
