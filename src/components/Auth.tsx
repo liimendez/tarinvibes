@@ -50,6 +50,26 @@ export default function Auth({ onLogin }: { onLogin: () => void }) {
         setMsg('Elegí un username de al menos 3 letras')
         return
       }
+
+      // NUEVO: Que no tenga insultos
+      const palabrasFeas = ['puta', 'puto', 'mierda', 'concha', 'verga', 'pija', 'chota', 'forro', 'pelotudo', 'boludo', 'trola', 'prostituta', 'pene', 'porno', 'xxx']
+      if (palabrasFeas.some(p => usernameLimpio.toLowerCase().includes(p))) {
+        setMsg('Elegí otro username, ese no está permitido')
+        return
+      }
+
+      // NUEVO: Que no esté repetido
+      const { data: existe } = await supabase
+        .from('profiles')
+        .select('id')
+        .ilike('username', usernameLimpio)
+        .single()
+
+      if (existe) {
+        setMsg('Ese username ya está en uso, elegí otro')
+        return
+      }
+
       if (password.length < 6) {
         setMsg('La contraseña tiene que tener al menos 6 caracteres')
         return
