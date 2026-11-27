@@ -150,7 +150,11 @@ export default function App() {
       <header className="flex justify-between items-center p-6 max-w-6xl mx-auto">
         <div>
           <button onClick={volverFeed} className="text-left">
-            <h1 className="text-3xl font-black">Tarin<span className="text-[#FF8A00]">Vibes</span></h1>
+            <div className="flex items-center gap-2">
+ 
+  <h1 className="text-3xl font-black">Tarin<span className="text-[#FF8A00]">Vibes</span></h1>
+   <img src="/logo.png" alt="TarinVibes" className="w-10 h-10 object-contain" />
+</div>
             <p className="text-[#A78BFA]">La comunidad volvió, con otras vibes</p>
           </button>
         </div>
