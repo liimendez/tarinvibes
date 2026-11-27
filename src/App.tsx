@@ -153,7 +153,7 @@ export default function App() {
             <div className="flex items-center gap-2">
  
   <h1 className="text-3xl font-black">Tarin<span className="text-[#FF8A00]">Vibes</span></h1>
-   <img src="/logo.png" alt="TarinVibes" className="w-10 h-10 object-contain" />
+   <img src="/logo.png" alt="TarinVibes" className="w-14 h-14 object-contain drop-shadow-[0_0_10px_rgba(139,92,246,0.8)] -ml-1" />
 </div>
             <p className="text-[#A78BFA]">La comunidad volvió, con otras vibes</p>
           </button>
