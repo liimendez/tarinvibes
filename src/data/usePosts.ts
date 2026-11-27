@@ -35,9 +35,13 @@ export function usePosts() {
       .select('*')
       .order('created_at', { ascending: true })
 
-    const { data: reactionsData } = await supabase
+    const { data: reactionsData, error: reactionsError } = await supabase
       .from('comment_reactions')
       .select('*')
+
+    if (reactionsError) {
+      console.log('Error cargando reacciones:', reactionsError)
+    }
 
     const { data: { user: usuarioActual } } = await supabase.auth.getUser()
 
@@ -71,7 +75,7 @@ export function usePosts() {
       comentarios: (commentsData || [])
         .filter((c: any) => c.post_id === row.id)
         .map((c: any) => {
-          const reaccionesDeEste = (reactionsData || []).filter((r: any) => r.comment_id === c.id)
+          const reaccionesDeEste = (reactionsData || []).filter((r: any) => String(r.comment_id) === String(c.id))
           const conteo: Record<string, number> = {}
           reaccionesDeEste.forEach((r: any) => {
             conteo[r.tipo] = (conteo[r.tipo] || 0) + 1
@@ -255,25 +259,36 @@ export function usePosts() {
       return
     }
 
-    const { data: existente } = await supabase
+    console.log('Reaccionando:', { commentId, tipo, userId: user.id })
+
+    const { data: existente, error: errorBuscar } = await supabase
       .from('comment_reactions')
       .select('id, tipo')
       .eq('comment_id', commentId)
       .eq('user_id', user.id)
       .maybeSingle()
 
+    if (errorBuscar) {
+      console.log('Error buscando reacción:', errorBuscar)
+      alert('Error buscando reacción: ' + errorBuscar.message)
+      return
+    }
+
     if (existente) {
       if (existente.tipo === tipo) {
-        await supabase.from('comment_reactions').delete().eq('id', existente.id)
+        const { error } = await supabase.from('comment_reactions').delete().eq('id', existente.id)
+        if (error) { alert('Error borrando reacción: ' + error.message); console.log(error); return }
       } else {
-        await supabase.from('comment_reactions').update({ tipo }).eq('id', existente.id)
+        const { error } = await supabase.from('comment_reactions').update({ tipo }).eq('id', existente.id)
+        if (error) { alert('Error cambiando reacción: ' + error.message); console.log(error); return }
       }
     } else {
-      await supabase.from('comment_reactions').insert({
+      const { error } = await supabase.from('comment_reactions').insert({
         comment_id: commentId,
         user_id: user.id,
         tipo,
       })
+      if (error) { alert('Error guardando reacción: ' + error.message); console.log(error); return }
     }
     cargar()
   }
