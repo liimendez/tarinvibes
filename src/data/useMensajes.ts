@@ -40,10 +40,7 @@ export function useMensajes(miId?: string | null) {
 
   const cargar = useCallback(async () => {
     if (!miId) return
-
-    const { data: perfiles } = await supabase
-      .from('profiles')
-      .select('id, nombre, username, avatar')
+    const { data: perfiles } = await supabase.from('profiles').select('id, nombre, username, avatar')
     const listaUsuarios = (perfiles || []).filter((p: any) => p.id !== miId)
     setUsuarios(listaUsuarios.map((p: any) => ({
       id: p.id,
@@ -51,22 +48,11 @@ export function useMensajes(miId?: string | null) {
       username: p.username || 'usuario',
       avatar: p.avatar || '🦇',
     })))
-
-    const { data: mensajes, error } = await supabase
-      .from('mensajes')
-      .select('*')
-      .or(`emisor_id.eq.${miId},receptor_id.eq.${miId}`)
-      .order('created_at', { ascending: true })
-
-    if (error) {
-      console.log('Error cargando mensajes:', error)
-      return
-    }
-
+    const { data: mensajes, error } = await supabase.from('mensajes').select('*').or(`emisor_id.eq.${miId},receptor_id.eq.${miId}`).order('created_at', { ascending: true })
+    if (error) { console.log('Error cargando mensajes:', error); return }
     const mapaPerfiles = new Map((perfiles || []).map((p: any) => [p.id, p]))
     const porOtro: Record<string, any[]> = {}
     let totalSinLeer = 0
-
     ;(mensajes || []).forEach((m: any) => {
       const otroId = m.emisor_id === miId ? m.receptor_id : m.emisor_id
       if (!porOtro[otroId]) porOtro[otroId] = []
@@ -74,7 +60,6 @@ export function useMensajes(miId?: string | null) {
       if (m.receptor_id === miId && !m.leido) totalSinLeer++
     })
     setSinLeerTotal(totalSinLeer)
-
     const convs: Conversacion[] = Object.entries(porOtro).map(([otroId, lista]) => {
       const perfil = mapaPerfiles.get(otroId)
       const ultimo = lista[lista.length - 1]
@@ -95,7 +80,6 @@ export function useMensajes(miId?: string | null) {
       return new Date(ultimoB).getTime() - new Date(ultimoA).getTime()
     })
     setConversaciones(convs)
-
     const chatsArmados: Record<string, MensajeChat[]> = {}
     Object.entries(porOtro).forEach(([otroId, lista]) => {
       chatsArmados[otroId] = lista.map((m: any) => ({
@@ -113,8 +97,7 @@ export function useMensajes(miId?: string | null) {
 
   useEffect(() => {
     if (!miId) return
-    const canal = supabase
-      .channel('mensajes-' + miId)
+    const canal = supabase.channel('mensajes-' + miId)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'mensajes' }, () => cargar())
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'mensajes' }, () => cargar())
       .subscribe()
@@ -123,26 +106,14 @@ export function useMensajes(miId?: string | null) {
 
   async function enviarMensaje(receptorId: string, texto: string) {
     if (!miId || !texto.trim()) return
-    const { error } = await supabase.from('mensajes').insert({
-      emisor_id: miId,
-      receptor_id: receptorId,
-      texto: texto.trim(),
-    })
-    if (error) {
-      alert('Error mandando mensaje: ' + error.message)
-      return
-    }
+    const { error } = await supabase.from('mensajes').insert({ emisor_id: miId, receptor_id: receptorId, texto: texto.trim() })
+    if (error) { alert('Error mandando mensaje: ' + error.message); return }
     await cargar()
   }
 
   async function marcarLeidos(otroId: string) {
     if (!miId) return
-    await supabase
-      .from('mensajes')
-      .update({ leido: true })
-      .eq('emisor_id', otroId)
-      .eq('receptor_id', miId)
-      .eq('leido', false)
+    await supabase.from('mensajes').update({ leido: true }).eq('emisor_id', otroId).eq('receptor_id', miId).eq('leido', false)
     await cargar()
   }
 
