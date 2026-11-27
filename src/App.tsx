@@ -55,10 +55,8 @@ export default function App() {
   const [mostrarForm, setMostrarForm] = useState(false)
   const [panel, setPanel] = useState<'ninguno' | 'notificaciones' | 'mensajes'>('ninguno')
 
-  // NOTIFICACIONES REALES DESDE SUPABASE
   const { notificaciones, sinLeer: notificacionesSinLeer, marcarTodasLeidas } = useNotificaciones(sesion?.user?.id)
 
-  // MENSAJES - TODAVIA EN LOCALSTORAGE POR USUARIO
   const [conversaciones, setConversaciones] = useState<Conversacion[]>([])
   const [chats, setChats] = useState<Record<string, MensajeChat[]>>({})
   const [mensajesSinLeer, setMensajesSinLeer] = useState(0)
@@ -139,11 +137,9 @@ export default function App() {
     return () => listener.subscription.unsubscribe()
   }, [])
 
-  // CARGAR MENSAJES POR USUARIO
   useEffect(() => {
     if (!sesion?.user?.id) return
     const userId = sesion.user.id
-
     const guardadasConv = localStorage.getItem(claveConversaciones(userId))
     if (guardadasConv) {
       try {
@@ -159,7 +155,6 @@ export default function App() {
       setMensajesSinLeer(0)
       localStorage.setItem(claveConversaciones(userId), JSON.stringify([]))
     }
-
     const guardadosChats = localStorage.getItem(claveChats(userId))
     if (guardadosChats) {
       try { setChats(JSON.parse(guardadosChats)) } catch { setChats({}) }
@@ -240,7 +235,6 @@ export default function App() {
       .select('id, nombre, username, avatar, bio, ciudad, peli_fav')
       .eq('id', sesion?.user?.id)
       .maybeSingle()
-
     if (data) {
       abrirUsuario({ id: data.id, nombre: data.nombre, username: data.username, avatar: data.avatar, bio: data.bio, ciudad: data.ciudad, peli_fav: data.peli_fav })
     } else {
@@ -258,6 +252,16 @@ export default function App() {
     setQ('')
     setPanel('ninguno')
     setChatCon(null)
+  }
+
+  function abrirNotificacion(postId?: string | null) {
+    if (!postId) return
+    const post = posts.find(p => p.id === postId)
+    if (post) {
+      setPanel('ninguno')
+      setChatCon(null)
+      abrirPost(post)
+    }
   }
 
   if (isRecovery) {
@@ -299,7 +303,6 @@ export default function App() {
             <option value="recientes">🕐 Más recientes</option>
             <option value="top">🔥 Más votados</option>
           </select>
-
           <h2 className="font-bold pt-2">Comunidades</h2>
           {comunidades.map(c => (
             <div key={c.id} className={`flex justify-between items-center p-2 rounded-xl hover:bg-[#2E1065] ${comunidadFiltro === c.id ? 'bg-violet-600/30 border border-violet-500' : ''}`}>
@@ -330,16 +333,17 @@ export default function App() {
               ) : (
                 <div className="divide-y divide-[#3B2A66]/60">
                   {notificaciones.map(n => (
-                    <div key={n.id} className="w-full flex gap-3 p-3 text-left items-start">
+                    <button key={n.id} onClick={() => abrirNotificacion(n.post_id)} className="w-full flex gap-3 p-3 text-left items-start hover:bg-[#2E1065]/50 cursor-pointer">
                       <span className="text-2xl shrink-0 w-10 h-10 bg-[#2E1065] rounded-full flex items-center justify-center">{n.avatar}</span>
                       <span className="flex-1 min-w-0">
                         <span className="block text-sm leading-snug">
                           {n.nombre && <b>{n.nombre} </b>}{n.accion} {n.detalle && <span className="text-[#A78BFA]">· {n.detalle}</span>}
                         </span>
                         <span className="block text-xs text-[#A78BFA] mt-1">{n.fecha} · {n.hace}</span>
+                        {n.post_id && <span className="block text-xs text-violet-300 mt-1">Tocá para ver el post →</span>}
                       </span>
                       {!n.leida && <span className="w-2.5 h-2.5 bg-violet-500 rounded-full mt-2 shrink-0"></span>}
-                    </div>
+                    </button>
                   ))}
                 </div>
               )}
@@ -390,7 +394,6 @@ export default function App() {
                 </div>
                 <button onClick={() => setChatCon(null)} className="text-xs text-[#A78BFA]">✕</button>
               </div>
-
               <div className="flex-1 overflow-y-auto p-3 space-y-2">
                 {(chats[chatCon.id] || []).map(m => (
                   <div key={m.id} className={`flex ${m.de === 'yo' ? 'justify-end' : 'justify-start'}`}>
@@ -401,7 +404,6 @@ export default function App() {
                   </div>
                 ))}
               </div>
-
               <form onSubmit={enviarMensaje} className="flex gap-2 p-3 border-t border-[#3B2A66] bg-[#0B0714]">
                 <input value={textoChat} onChange={e => setTextoChat(e.target.value)} placeholder={`Mensaje para ${chatCon.nombre}...`} className="flex-1 bg-[#171029] border border-[#3B2A66] rounded-full px-4 py-2 text-sm outline-none" />
                 <button className="bg-violet-600 px-4 py-2 rounded-full font-bold text-sm">Enviar ➤</button>
