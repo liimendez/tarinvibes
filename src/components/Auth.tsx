@@ -29,21 +29,81 @@ export default function Auth({ onLogin }: { onLogin: () => void }) {
     setMsg('Cargando...')
 
     if (modo === 'registro') {
-      const { data, error } = await supabase.auth.signUp({ email, password })
+      // 1. Limpiamos el mail
+      const emailLimpio = email.trim().toLowerCase()
+      const usernameLimpio = username.trim()
+
+      // 2. ¿Tiene forma de mail real?
+      const emailValido = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(emailLimpio)
+      if (!emailValido) {
+        setMsg('Poné un email real, tipo nombre@gmail.com')
+        return
+      }
+
+      // 3. ¿Es un mail temporal / descartable?
+      const dominiosBasura = ['tempmail', '10minutemail', 'guerrillamail', 'mailinator', 'yopmail', 'temp-mail', 'throwaway', 'dispostable', 'getnada']
+      if (dominiosBasura.some(d => emailLimpio.includes(d))) {
+        setMsg('Usá un mail real, no uno temporal')
+        return
+      }
+
+      // 4. Username y contraseña
+      if (!usernameLimpio || usernameLimpio.length < 3) {
+        setMsg('Elegí un username de al menos 3 letras')
+        return
+      }
+      if (password.length < 6) {
+        setMsg('La contraseña tiene que tener al menos 6 caracteres')
+        return
+      }
+
+      setEmail(emailLimpio)
+
+      // 5. Ahora sí, mandamos a Supabase
+      const { data, error } = await supabase.auth.signUp({
+        email: emailLimpio,
+        password,
+        options: {
+          data: { username: usernameLimpio }
+        }
+      })
       if (error) { setMsg('Error: ' + error.message); return }
+
+      // 6. CLAVE: Si todavía no confirmó el mail, NO le creamos el perfil todavía
+      if (data.user && !data.user.email_confirmed_at) {
+        setMsg('¡Casi listo! Te mandamos un mail para confirmar tu cuenta. Sin confirmar no podés entrar. Revisá bandeja y spam.')
+        setModo('login')
+        return
+      }
+
+      // 7. Si ya estaba confirmado, recién ahí creamos perfil
       if (data.user) {
         await supabase.from('profiles').insert({
           id: data.user.id,
-          username: username || email.split('@')[0],
-          nombre: username || email.split('@')[0],
+          username: usernameLimpio || emailLimpio.split('@')[0],
+          nombre: usernameLimpio || emailLimpio.split('@')[0],
           avatar: '🦇',
         })
         setMsg('¡Cuenta creada! Ya podés entrar.')
         setModo('login')
       }
     } else {
-      const { error } = await supabase.auth.signInWithPassword({ email, password })
+      // LOGIN: si es la primera vez que entra ya confirmado y no tiene perfil, se lo creamos acá
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password })
       if (error) { setMsg('Error: ' + error.message); return }
+
+      if (data.user) {
+        const { data: perfilExistente } = await supabase.from('profiles').select('id').eq('id', data.user.id).single()
+        if (!perfilExistente) {
+          const nombreGuardado = (data.user.user_metadata?.username as string) || email.split('@')[0]
+          await supabase.from('profiles').insert({
+            id: data.user.id,
+            username: nombreGuardado,
+            nombre: nombreGuardado,
+            avatar: '🦇',
+          })
+        }
+      }
       onLogin()
     }
   }
@@ -88,7 +148,7 @@ export default function Auth({ onLogin }: { onLogin: () => void }) {
           <div className="relative">
             <input type={mostrarNuevaPass ? 'text' : 'password'} value={nuevaPass} onChange={e => setNuevaPass(e.target.value)} placeholder="Nueva contraseña" className="w-full bg-[#0B0714] border border-[#3B2A66] rounded-xl p-3 pr-12" />
             <button type="button" onClick={() => setMostrarNuevaPass(!mostrarNuevaPass)} className="absolute right-3 top-1/2 -translate-y-1/2 text-xl" title={mostrarNuevaPass ? 'Ocultar contraseña' : 'Mostrar contraseña'}>
-              {mostrarNuevaPass ? '🙈' : '👁️'}
+              {mostrarNuevaPass ? '🙈' : '👁'}
             </button>
           </div>
           <button className="w-full bg-violet-600 p-3 rounded-xl font-bold">Cambiar contraseña</button>
@@ -111,7 +171,7 @@ export default function Auth({ onLogin }: { onLogin: () => void }) {
           <div className="relative">
             <input type={mostrarPass ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} placeholder="Contraseña" className="w-full bg-[#0B0714] border border-[#3B2A66] rounded-xl p-3 pr-12" />
             <button type="button" onClick={() => setMostrarPass(!mostrarPass)} className="absolute right-3 top-1/2 -translate-y-1/2 text-xl" title={mostrarPass ? 'Ocultar contraseña' : 'Mostrar contraseña'}>
-              {mostrarPass ? '🙈' : '👁️'}
+              {mostrarPass ? '🙈' : '👁'}
             </button>
           </div>
           <button className="w-full bg-violet-600 p-3 rounded-xl font-bold">{modo === 'login' ? 'Entrar' : 'Crear cuenta'}</button>
