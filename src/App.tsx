@@ -9,29 +9,12 @@ import PostDetail from './components/PostDetail'
 import UserPanel from './components/UserPanel'
 import { useComunidades } from './data/useComunidades'
 import Navbar from './components/Navbar'
+import { useMensajes, type Conversacion } from './data/useMensajes'
 
 const CATEGORIAS: Categoria[] = ['Música', 'Gatos', 'Tecnología', 'Humor', 'Vida', 'Gaming']
 
 function slugify(t: string) {
   return t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
-}
-
-type Conversacion = {
-  id: string
-  nombre: string
-  username: string
-  avatar: string
-  ultimoMensaje: string
-  fecha: string
-  hace: string
-  sinLeer: number
-}
-
-type MensajeChat = {
-  id: string
-  de: 'yo' | 'otro'
-  texto: string
-  hora: string
 }
 
 export default function App() {
@@ -57,22 +40,14 @@ export default function App() {
 
   const { notificaciones, sinLeer: notificacionesSinLeer, marcarTodasLeidas } = useNotificaciones(sesion?.user?.id)
 
-  const [conversaciones, setConversaciones] = useState<Conversacion[]>([])
-  const [chats, setChats] = useState<Record<string, MensajeChat[]>>({})
-  const [mensajesSinLeer, setMensajesSinLeer] = useState(0)
+  // MENSAJES REALES EN SUPABASE
+  const { conversaciones, chats, usuarios, sinLeerTotal: mensajesSinLeer, enviarMensaje: enviarMensajeReal, marcarLeidos, iniciarChatCon } = useMensajes(sesion?.user?.id)
 
   const [chatCon, setChatCon] = useState<Conversacion | null>(null)
   const [textoChat, setTextoChat] = useState('')
   const [tema, setTema] = useState<'oscuro' | 'claro'>(() => {
     return localStorage.getItem('tarinvibes-tema') === 'claro' ? 'claro' : 'oscuro'
   })
-
-  function claveConversaciones(userId?: string) {
-    return 'tarinvibes-conversaciones-' + (userId || sesion?.user?.id || 'invitado')
-  }
-  function claveChats(userId?: string) {
-    return 'tarinvibes-chats-' + (userId || sesion?.user?.id || 'invitado')
-  }
 
   function cambiarTema() {
     const nuevo = tema === 'oscuro' ? 'claro' : 'oscuro'
@@ -92,39 +67,20 @@ export default function App() {
   function abrirMensajes() {
     setChatCon(null)
     setVista('feed')
-    if (panel !== 'mensajes') {
-      setMensajesSinLeer(0)
-    }
     setPanel(panel === 'mensajes' ? 'ninguno' : 'mensajes')
   }
 
   function abrirChat(conv: Conversacion) {
     setChatCon(conv)
     setPanel('ninguno')
-    setConversaciones(prev => {
-      const actualizadas = prev.map(c => c.id === conv.id ? { ...c, sinLeer: 0 } : c)
-      localStorage.setItem(claveConversaciones(), JSON.stringify(actualizadas))
-      return actualizadas
-    })
-    setMensajesSinLeer(0)
+    marcarLeidos(conv.id)
     window.scrollTo(0, 0)
   }
 
   function enviarMensaje(e: React.FormEvent) {
     e.preventDefault()
     if (!textoChat.trim() || !chatCon) return
-    const hora = new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
-    const nuevo: MensajeChat = { id: Date.now().toString(), de: 'yo', texto: textoChat.trim(), hora }
-    setChats(prev => {
-      const actualizados = { ...prev, [chatCon.id]: [...(prev[chatCon.id] || []), nuevo] }
-      localStorage.setItem(claveChats(), JSON.stringify(actualizados))
-      return actualizados
-    })
-    setConversaciones(prev => {
-      const actualizadas = prev.map(c => c.id === chatCon.id ? { ...c, ultimoMensaje: textoChat.trim(), fecha: 'Hoy, ' + hora, hace: 'ahora' } : c)
-      localStorage.setItem(claveConversaciones(), JSON.stringify(actualizadas))
-      return actualizadas
-    })
+    enviarMensajeReal(chatCon.id, textoChat.trim())
     setTextoChat('')
   }
 
@@ -136,35 +92,6 @@ export default function App() {
     })
     return () => listener.subscription.unsubscribe()
   }, [])
-
-  useEffect(() => {
-    if (!sesion?.user?.id) return
-    const userId = sesion.user.id
-    const guardadasConv = localStorage.getItem(claveConversaciones(userId))
-    if (guardadasConv) {
-      try {
-        const lista: Conversacion[] = JSON.parse(guardadasConv)
-        setConversaciones(lista)
-        setMensajesSinLeer(lista.reduce((acc, c) => acc + c.sinLeer, 0))
-      } catch {
-        setConversaciones([])
-        setMensajesSinLeer(0)
-      }
-    } else {
-      setConversaciones([])
-      setMensajesSinLeer(0)
-      localStorage.setItem(claveConversaciones(userId), JSON.stringify([]))
-    }
-    const guardadosChats = localStorage.getItem(claveChats(userId))
-    if (guardadosChats) {
-      try { setChats(JSON.parse(guardadosChats)) } catch { setChats({}) }
-    } else {
-      setChats({})
-      localStorage.setItem(claveChats(userId), JSON.stringify({}))
-    }
-    setChatCon(null)
-    setPanel('ninguno')
-  }, [sesion?.user?.id])
 
   useEffect(() => {
     if (postSeleccionado) {
@@ -357,6 +284,23 @@ export default function App() {
                 <button onClick={() => setPanel('ninguno')} className="text-xs text-[#A78BFA]">✕ Cerrar</button>
               </div>
               <p className="text-xs text-[#A78BFA] px-4 pb-2">Chats privados · tocá uno para entrar</p>
+
+              {usuarios.filter(u => !conversaciones.find(c => c.id === u.id)).length > 0 && (
+                <div className="px-4 pb-2">
+                  <p className="text-xs text-[#A78BFA] mb-2">Empezar chat nuevo:</p>
+                  <div className="flex gap-2 flex-wrap">
+                    {usuarios.filter(u => !conversaciones.find(c => c.id === u.id)).map(u => (
+                      <button key={u.id} onClick={async () => {
+                        const conv = await iniciarChatCon(u.id)
+                        if (conv) abrirChat(conv)
+                      }} className="text-xs bg-[#2E1065] border border-[#3B2A66] px-2 py-1 rounded-full">
+                        {u.avatar} {u.nombre}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {conversaciones.length === 0 ? (
                 <p className="p-4 text-sm text-[#A78BFA]">Todavía no tenés mensajes privados</p>
               ) : (
@@ -379,7 +323,6 @@ export default function App() {
                   ))}
                 </div>
               )}
-              <p className="text-xs text-center text-[#A78BFA] p-3 border-t border-[#3B2A66]/60">Próximamente: chat real con tabla mensajes en Supabase</p>
             </div>
           )}
 
@@ -435,6 +378,14 @@ export default function App() {
               onAbrirPost={abrirPost}
               onTagClick={(tag) => { setTagFiltro(tag); setVista('feed') }}
               onPerfilActualizado={() => window.location.reload()}
+              onMensaje={async (u) => {
+                const conv = await iniciarChatCon(u.id)
+                if (conv) {
+                  setVista('feed')
+                  setPanel('ninguno')
+                  abrirChat(conv)
+                }
+              }}
             />
           )}
 
