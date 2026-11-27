@@ -54,11 +54,14 @@ export function usePosts() {
       titulo: row.titulo,
       slug: row.slug,
       cuerpo: row.cuerpo,
+      descripcion: row.descripcion || (row.cuerpo ? row.cuerpo.slice(0, 140) + (row.cuerpo.length > 140 ? '...' : '') : ''),
+      imagen_url: row.imagen_url || null,
       categoria: row.categoria,
       tags: row.tags || [],
+      comunidad_id: row.comunidad_id || null,
       autor: autorDe(row.autor_id),
       puntos: row.puntos || 0,
-      createdAt: row.created_at?.slice(0, 10) || '',
+      createdAt: row.created_at || '',
       comentarios: (commentsData || [])
         .filter((c: any) => c.post_id === row.id)
         .map((c: any) => ({
@@ -66,7 +69,7 @@ export function usePosts() {
           postId: c.post_id,
           autor: autorDe(c.autor_id),
           texto: c.texto,
-          createdAt: c.created_at?.slice(0, 10) || '',
+          createdAt: c.created_at || '',
         })),
     }))
 
@@ -115,10 +118,13 @@ export function usePosts() {
       titulo: p.titulo,
       slug: p.slug,
       cuerpo: p.cuerpo,
+      descripcion: p.descripcion || (p.cuerpo ? p.cuerpo.slice(0, 140) : ''),
+      imagen_url: p.imagen_url || null,
       categoria: p.categoria,
       tags: p.tags,
       puntos: 0,
       autor_id: user?.id || null,
+      comunidad_id: p.comunidad_id || null,
     }).select()
 
     console.log('Resultado insert:', data, error)
@@ -135,12 +141,14 @@ export function usePosts() {
     cargar()
   }
 
-  async function editar(id: string, datos: { titulo: string, cuerpo: string, categoria: Categoria }) {
+  async function editar(id: string, datos: { titulo: string, cuerpo: string, categoria: Categoria, descripcion?: string, imagen_url?: string | null }) {
     setPosts(prev => prev.map(p => p.id === id ? { ...p, ...datos } : p))
     await supabase.from('posts').update({
       titulo: datos.titulo,
       cuerpo: datos.cuerpo,
       categoria: datos.categoria,
+      descripcion: datos.descripcion,
+      imagen_url: datos.imagen_url,
     }).eq('id', id)
   }
 

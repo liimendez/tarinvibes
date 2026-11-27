@@ -23,19 +23,28 @@ export interface Post {
   titulo: string
   slug: string
   cuerpo: string
+  descripcion?: string | null
+  imagen_url?: string | null
   categoria: Categoria
   tags: string[]
   autor: User
   puntos: number
   createdAt: string
   comentarios: Comentario[]
+  comunidad_id?: string | null
 }
 
+export type Comunidad = {
+  id: string
+  nombre: string
+  slug: string
+  descripcion: string
+  icono: string
+  miembros?: number
+  estoyUnido?: boolean
+}
 
-
-
-
-
-
-
-
+export type Follow = {
+  seguidor_id: string
+  seguido_id: string
+}
