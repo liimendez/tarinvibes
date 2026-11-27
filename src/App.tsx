@@ -44,28 +44,10 @@ type MensajeChat = {
   hora: string
 }
 
-const NOTIFICACIONES_INICIALES: Notificacion[] = [
-  { id: '1', avatar: '🦋', nombre: 'Xime', accion: 'te votó un post 🔥', detalle: '“Top 10 mejores canciones de 【entity-Megadeth¦canonical_name=Megadeth】”', fecha: 'Hoy, 10:42', hace: 'hace 12 min', leida: false },
-  { id: '2', avatar: '🦋', nombre: 'Xime', accion: 'comentó en tu post 💬', detalle: '“¡amé tu post de Charly!”', fecha: 'Hoy, 10:15', hace: 'hace 39 min', leida: false },
-  { id: '3', avatar: '🎸', nombre: '', accion: 'Te uniste a la comunidad Música', detalle: '', fecha: 'Ayer, 22:30', hace: 'hace 12 hs', leida: false },
-  { id: '4', avatar: '🦇', nombre: 'TarinVibes', accion: 'te dio la bienvenida 🦇', detalle: '¡Publicá tu primer post!', fecha: '26/11/2026, 18:05', hace: 'hace 2 días', leida: true },
-]
-
-const CONVERSACIONES_INICIALES: Conversacion[] = [
-  { id: 'xime', nombre: 'Xime', username: 'xime', avatar: '🦋', ultimoMensaje: '¡amé tu post de Charly!', fecha: 'Hoy, 10:15', hace: 'hace 39 min', sinLeer: 1 },
-  { id: 'santi', nombre: 'Santi', username: 'santi', avatar: '🎮', ultimoMensaje: '¿viste lo de Gaming?', fecha: 'Ayer, 21:10', hace: 'hace 1 día', sinLeer: 0 },
-]
-
-const CHATS_INICIALES: Record<string, MensajeChat[]> = {
-  xime: [
-    { id: '1', de: 'otro', texto: '¡amé tu post de Charly!', hora: '10:15' },
-    { id: '2', de: 'yo', texto: '¡gracias! ¿viste el de Megadeth también?', hora: '10:20' },
-    { id: '3', de: 'otro', texto: 'sí, ese también está buenísimo 🔥', hora: '10:22' },
-  ],
-  santi: [
-    { id: '1', de: 'otro', texto: '¿viste lo de Gaming?', hora: '21:10' },
-    { id: '2', de: 'yo', texto: 'todavía no, ¿qué pasó?', hora: '21:12' },
-  ],
+function bienvenidaParaUsuario(): Notificacion[] {
+  return [
+    { id: 'bienvenida', avatar: '🦇', nombre: 'TarinVibes', accion: 'te dio la bienvenida 🦇', detalle: '¡Publicá tu primer post!', fecha: 'Hoy', hace: 'ahora', leida: false }
+  ]
 }
 
 export default function App() {
@@ -89,56 +71,28 @@ export default function App() {
   const [mostrarForm, setMostrarForm] = useState(false)
   const [panel, setPanel] = useState<'ninguno' | 'notificaciones' | 'mensajes'>('ninguno')
 
-  // NOTIFICACIONES CON LOCALSTORAGE - NO VUELVEN DESPUES DE F5
-  const [notificaciones, setNotificaciones] = useState<Notificacion[]>(() => {
-    try {
-      const guardadas = localStorage.getItem('tarinvibes-notificaciones')
-      if (guardadas) return JSON.parse(guardadas)
-    } catch {}
-    return NOTIFICACIONES_INICIALES
-  })
-  const [notificacionesSinLeer, setNotificacionesSinLeer] = useState(() => {
-    try {
-      const guardadas = localStorage.getItem('tarinvibes-notificaciones')
-      if (guardadas) {
-        const lista: Notificacion[] = JSON.parse(guardadas)
-        return lista.filter(n => !n.leida).length
-      }
-    } catch {}
-    return 3
-  })
-
-  // MENSAJES CON LOCALSTORAGE - NO VUELVEN DESPUES DE F5
-  const [conversaciones, setConversaciones] = useState<Conversacion[]>(() => {
-    try {
-      const guardadas = localStorage.getItem('tarinvibes-conversaciones')
-      if (guardadas) return JSON.parse(guardadas)
-    } catch {}
-    return CONVERSACIONES_INICIALES
-  })
-  const [chats, setChats] = useState<Record<string, MensajeChat[]>>(() => {
-    try {
-      const guardados = localStorage.getItem('tarinvibes-chats')
-      if (guardados) return JSON.parse(guardados)
-    } catch {}
-    return CHATS_INICIALES
-  })
-  const [mensajesSinLeer, setMensajesSinLeer] = useState(() => {
-    try {
-      const guardadas = localStorage.getItem('tarinvibes-conversaciones')
-      if (guardadas) {
-        const lista: Conversacion[] = JSON.parse(guardadas)
-        return lista.reduce((acc, c) => acc + c.sinLeer, 0)
-      }
-    } catch {}
-    return 1
-  })
+  // Empiezan vacios, se cargan por usuario cuando llega la sesion
+  const [notificaciones, setNotificaciones] = useState<Notificacion[]>([])
+  const [notificacionesSinLeer, setNotificacionesSinLeer] = useState(0)
+  const [conversaciones, setConversaciones] = useState<Conversacion[]>([])
+  const [chats, setChats] = useState<Record<string, MensajeChat[]>>({})
+  const [mensajesSinLeer, setMensajesSinLeer] = useState(0)
 
   const [chatCon, setChatCon] = useState<Conversacion | null>(null)
   const [textoChat, setTextoChat] = useState('')
   const [tema, setTema] = useState<'oscuro' | 'claro'>(() => {
     return localStorage.getItem('tarinvibes-tema') === 'claro' ? 'claro' : 'oscuro'
   })
+
+  function claveNotificaciones(userId?: string) {
+    return 'tarinvibes-notificaciones-' + (userId || sesion?.user?.id || 'invitado')
+  }
+  function claveConversaciones(userId?: string) {
+    return 'tarinvibes-conversaciones-' + (userId || sesion?.user?.id || 'invitado')
+  }
+  function claveChats(userId?: string) {
+    return 'tarinvibes-chats-' + (userId || sesion?.user?.id || 'invitado')
+  }
 
   function cambiarTema() {
     const nuevo = tema === 'oscuro' ? 'claro' : 'oscuro'
@@ -153,7 +107,7 @@ export default function App() {
       setNotificacionesSinLeer(0)
       setNotificaciones(prev => {
         const actualizadas = prev.map(n => ({ ...n, leida: true }))
-        localStorage.setItem('tarinvibes-notificaciones', JSON.stringify(actualizadas))
+        localStorage.setItem(claveNotificaciones(), JSON.stringify(actualizadas))
         return actualizadas
       })
     }
@@ -174,7 +128,7 @@ export default function App() {
     setPanel('ninguno')
     setConversaciones(prev => {
       const actualizadas = prev.map(c => c.id === conv.id ? { ...c, sinLeer: 0 } : c)
-      localStorage.setItem('tarinvibes-conversaciones', JSON.stringify(actualizadas))
+      localStorage.setItem(claveConversaciones(), JSON.stringify(actualizadas))
       return actualizadas
     })
     setMensajesSinLeer(0)
@@ -188,12 +142,12 @@ export default function App() {
     const nuevo: MensajeChat = { id: Date.now().toString(), de: 'yo', texto: textoChat.trim(), hora }
     setChats(prev => {
       const actualizados = { ...prev, [chatCon.id]: [...(prev[chatCon.id] || []), nuevo] }
-      localStorage.setItem('tarinvibes-chats', JSON.stringify(actualizados))
+      localStorage.setItem(claveChats(), JSON.stringify(actualizados))
       return actualizados
     })
     setConversaciones(prev => {
       const actualizadas = prev.map(c => c.id === chatCon.id ? { ...c, ultimoMensaje: textoChat.trim(), fecha: 'Hoy, ' + hora, hace: 'ahora' } : c)
-      localStorage.setItem('tarinvibes-conversaciones', JSON.stringify(actualizadas))
+      localStorage.setItem(claveConversaciones(), JSON.stringify(actualizadas))
       return actualizadas
     })
     setTextoChat('')
@@ -207,6 +161,61 @@ export default function App() {
     })
     return () => listener.subscription.unsubscribe()
   }, [])
+
+  // CARGAR NOTIFICACIONES Y MENSAJES POR USUARIO - NO SE MEZCLAN
+  useEffect(() => {
+    if (!sesion?.user?.id) return
+    const userId = sesion.user.id
+
+    const guardadasNoti = localStorage.getItem(claveNotificaciones(userId))
+    if (guardadasNoti) {
+      try {
+        const lista: Notificacion[] = JSON.parse(guardadasNoti)
+        // Limpia cualquier texto roto que haya quedado pegado de antes
+        const limpia = lista.map(n => ({
+          ...n,
+          detalle: n.detalle.replace('Megadeth', 'Megadeth'),
+          accion: n.accion.replace('Megadeth', 'Megadeth'),
+        }))
+        setNotificaciones(limpia)
+        setNotificacionesSinLeer(limpia.filter(n => !n.leida).length)
+      } catch {
+        setNotificaciones(bienvenidaParaUsuario())
+        setNotificacionesSinLeer(1)
+      }
+    } else {
+      const bienvenida = bienvenidaParaUsuario()
+      setNotificaciones(bienvenida)
+      setNotificacionesSinLeer(1)
+      localStorage.setItem(claveNotificaciones(userId), JSON.stringify(bienvenida))
+    }
+
+    const guardadasConv = localStorage.getItem(claveConversaciones(userId))
+    if (guardadasConv) {
+      try {
+        const lista: Conversacion[] = JSON.parse(guardadasConv)
+        setConversaciones(lista)
+        setMensajesSinLeer(lista.reduce((acc, c) => acc + c.sinLeer, 0))
+      } catch {
+        setConversaciones([])
+        setMensajesSinLeer(0)
+      }
+    } else {
+      setConversaciones([])
+      setMensajesSinLeer(0)
+      localStorage.setItem(claveConversaciones(userId), JSON.stringify([]))
+    }
+
+    const guardadosChats = localStorage.getItem(claveChats(userId))
+    if (guardadosChats) {
+      try { setChats(JSON.parse(guardadosChats)) } catch { setChats({}) }
+    } else {
+      setChats({})
+      localStorage.setItem(claveChats(userId), JSON.stringify({}))
+    }
+    setChatCon(null)
+    setPanel('ninguno')
+  }, [sesion?.user?.id])
 
   useEffect(() => {
     if (postSeleccionado) {
@@ -362,20 +371,24 @@ export default function App() {
                 <h2 className="font-bold text-lg">🔔 Notificaciones</h2>
                 <button onClick={() => setPanel('ninguno')} className="text-xs text-[#A78BFA]">✕ Cerrar</button>
               </div>
-              <div className="divide-y divide-[#3B2A66]/60">
-                {notificaciones.map(n => (
-                  <div key={n.id} className="w-full flex gap-3 p-3 text-left items-start">
-                    <span className="text-2xl shrink-0 w-10 h-10 bg-[#2E1065] rounded-full flex items-center justify-center">{n.avatar}</span>
-                    <span className="flex-1 min-w-0">
-                      <span className="block text-sm leading-snug">
-                        {n.nombre && <b>{n.nombre} </b>}{n.accion} {n.detalle && <span className="text-[#A78BFA]">· {n.detalle}</span>}
+              {notificaciones.length === 0 ? (
+                <p className="p-4 text-sm text-[#A78BFA]">Sin notificaciones por ahora</p>
+              ) : (
+                <div className="divide-y divide-[#3B2A66]/60">
+                  {notificaciones.map(n => (
+                    <div key={n.id} className="w-full flex gap-3 p-3 text-left items-start">
+                      <span className="text-2xl shrink-0 w-10 h-10 bg-[#2E1065] rounded-full flex items-center justify-center">{n.avatar}</span>
+                      <span className="flex-1 min-w-0">
+                        <span className="block text-sm leading-snug">
+                          {n.nombre && <b>{n.nombre} </b>}{n.accion} {n.detalle && <span className="text-[#A78BFA]">· {n.detalle}</span>}
+                        </span>
+                        <span className="block text-xs text-[#A78BFA] mt-1">{n.fecha} · {n.hace}</span>
                       </span>
-                      <span className="block text-xs text-[#A78BFA] mt-1">{n.fecha} · {n.hace}</span>
-                    </span>
-                    {!n.leida && <span className="w-2.5 h-2.5 bg-violet-500 rounded-full mt-2 shrink-0"></span>}
-                  </div>
-                ))}
-              </div>
+                      {!n.leida && <span className="w-2.5 h-2.5 bg-violet-500 rounded-full mt-2 shrink-0"></span>}
+                    </div>
+                  ))}
+                </div>
+              )}
               <p className="text-xs text-center text-[#A78BFA] p-3 border-t border-[#3B2A66]/60">Próximamente: notificaciones reales desde Supabase</p>
             </div>
           )}
@@ -387,24 +400,28 @@ export default function App() {
                 <button onClick={() => setPanel('ninguno')} className="text-xs text-[#A78BFA]">✕ Cerrar</button>
               </div>
               <p className="text-xs text-[#A78BFA] px-4 pb-2">Chats privados · tocá uno para entrar</p>
-              <div className="divide-y divide-[#3B2A66]/60">
-                {conversaciones.map(conv => (
-                  <button key={conv.id} onClick={() => abrirChat(conv)} className="w-full flex gap-3 p-3 hover:bg-[#2E1065]/50 text-left items-center">
-                    <span className="text-2xl shrink-0 w-11 h-11 bg-[#2E1065] rounded-full flex items-center justify-center relative">{conv.avatar}
-                      {conv.sinLeer > 0 && <span className="absolute -top-1 -right-1 bg-violet-500 text-xs w-5 h-5 rounded-full flex items-center justify-center font-bold">{conv.sinLeer}</span>}
-                    </span>
-                    <span className="flex-1 min-w-0">
-                      <span className="flex justify-between gap-2">
-                        <b className="text-sm truncate">{conv.nombre}</b>
-                        <span className="text-xs text-[#A78BFA] shrink-0">{conv.hace}</span>
+              {conversaciones.length === 0 ? (
+                <p className="p-4 text-sm text-[#A78BFA]">Todavía no tenés mensajes privados</p>
+              ) : (
+                <div className="divide-y divide-[#3B2A66]/60">
+                  {conversaciones.map(conv => (
+                    <button key={conv.id} onClick={() => abrirChat(conv)} className="w-full flex gap-3 p-3 hover:bg-[#2E1065]/50 text-left items-center">
+                      <span className="text-2xl shrink-0 w-11 h-11 bg-[#2E1065] rounded-full flex items-center justify-center relative">{conv.avatar}
+                        {conv.sinLeer > 0 && <span className="absolute -top-1 -right-1 bg-violet-500 text-xs w-5 h-5 rounded-full flex items-center justify-center font-bold">{conv.sinLeer}</span>}
                       </span>
-                      <span className="block text-sm text-[#A78BFA] truncate">{conv.ultimoMensaje}</span>
-                      <span className="block text-xs text-[#A78BFA] mt-0.5">{conv.fecha}</span>
-                    </span>
-                    <span className="text-[#A78BFA]">›</span>
-                  </button>
-                ))}
-              </div>
+                      <span className="flex-1 min-w-0">
+                        <span className="flex justify-between gap-2">
+                          <b className="text-sm truncate">{conv.nombre}</b>
+                          <span className="text-xs text-[#A78BFA] shrink-0">{conv.hace}</span>
+                        </span>
+                        <span className="block text-sm text-[#A78BFA] truncate">{conv.ultimoMensaje}</span>
+                        <span className="block text-xs text-[#A78BFA] mt-0.5">{conv.fecha}</span>
+                      </span>
+                      <span className="text-[#A78BFA]">›</span>
+                    </button>
+                  ))}
+                </div>
+              )}
               <p className="text-xs text-center text-[#A78BFA] p-3 border-t border-[#3B2A66]/60">Próximamente: chat real con tabla mensajes en Supabase</p>
             </div>
           )}
