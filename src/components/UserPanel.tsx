@@ -1,3 +1,5 @@
+import { useEffect, useState } from 'react'
+import { supabase } from '../lib/supabase'
 import type { Post, User } from '../data/types'
 
 type Props = {
@@ -16,6 +18,62 @@ export default function UserPanel({ usuario, posts, isOwn, onVolver, onAbrirPost
   const misPuntos = misPosts.reduce((acc, p) => acc + p.puntos, 0)
   const misComentarios = posts.reduce((acc, p) => acc + p.comentarios.filter(c => c.autor.id === usuario.id).length, 0)
 
+  const [loSigo, setLoSigo] = useState(false)
+  const [seguidores, setSeguidores] = useState(0)
+  const [seguidos, setSeguidos] = useState(0)
+  const [miId, setMiId] = useState<string | null>(null)
+
+  useEffect(() => {
+    async function cargarFollows() {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      setMiId(user.id)
+
+      // ¿Ya lo sigo?
+      const { data: yaSigo } = await supabase
+        .from('follows')
+        .select('id')
+        .eq('seguidor_id', user.id)
+        .eq('seguido_id', usuario.id)
+        .single()
+      setLoSigo(!!yaSigo)
+
+      // ¿Cuántos lo siguen a él?
+      const { count: cantSeguidores } = await supabase
+        .from('follows')
+        .select('*', { count: 'exact', head: true })
+        .eq('seguido_id', usuario.id)
+      setSeguidores(cantSeguidores || 0)
+
+      // ¿A cuántos sigue él?
+      const { count: cantSeguidos } = await supabase
+        .from('follows')
+        .select('*', { count: 'exact', head: true })
+        .eq('seguidor_id', usuario.id)
+      setSeguidos(cantSeguidos || 0)
+    }
+    cargarFollows()
+  }, [usuario.id])
+
+  async function toggleSeguir() {
+    if (!miId) return
+    if (loSigo) {
+      await supabase
+        .from('follows')
+        .delete()
+        .eq('seguidor_id', miId)
+        .eq('seguido_id', usuario.id)
+      setLoSigo(false)
+      setSeguidores(s => s - 1)
+    } else {
+      await supabase
+        .from('follows')
+        .insert({ seguidor_id: miId, seguido_id: usuario.id })
+      setLoSigo(true)
+      setSeguidores(s => s + 1)
+    }
+  }
+
   return (
     <div className="space-y-4 max-w-5xl mx-auto w-full">
       <button onClick={onVolver} className="text-sm text-[#A78BFA]">← Volver al feed</button>
@@ -29,14 +87,22 @@ export default function UserPanel({ usuario, posts, isOwn, onVolver, onAbrirPost
         {usuario.ciudad && <p className="text-xs text-[#A78BFA] mt-1">📍 {usuario.ciudad}</p>}
         {usuario.peli_fav && <p className="text-xs text-[#A78BFA] mt-1">🎬 Película favorita: {usuario.peli_fav}</p>}
 
-        {/* BOTON MENSAJE - solo si NO es mi perfil */}
+        {/* BOTONES - solo si NO es mi perfil */}
         {!isOwn && (
-          <button
-            onClick={() => onMensaje?.(usuario)}
-            className="mt-4 bg-violet-600 hover:bg-violet-500 px-5 py-2 rounded-full font-bold text-sm"
-          >
-            💬 Enviar mensaje
-          </button>
+          <div className="flex justify-center gap-2 mt-4">
+            <button
+              onClick={toggleSeguir}
+              className={loSigo ? "bg-[#3B2A66] hover:bg-[#4C3678] px-5 py-2 rounded-full font-bold text-sm" : "bg-[#FF8A00] hover:bg-[#FF9A1F] text-black px-5 py-2 rounded-full font-bold text-sm"}
+            >
+              {loSigo ? '✓ Siguiendo' : '+ Seguir'}
+            </button>
+            <button
+              onClick={() => onMensaje?.(usuario)}
+              className="bg-violet-600 hover:bg-violet-500 px-5 py-2 rounded-full font-bold text-sm"
+            >
+              💬 Enviar mensaje
+            </button>
+          </div>
         )}
 
         {isOwn && (
@@ -47,6 +113,14 @@ export default function UserPanel({ usuario, posts, isOwn, onVolver, onAbrirPost
           <div className="text-center">
             <p className="font-bold text-lg">{misPosts.length}</p>
             <p className="text-[#A78BFA] text-xs">posts</p>
+          </div>
+          <div className="text-center">
+            <p className="font-bold text-lg">{seguidores}</p>
+            <p className="text-[#A78BFA] text-xs">seguidores</p>
+          </div>
+          <div className="text-center">
+            <p className="font-bold text-lg">{seguidos}</p>
+            <p className="text-[#A78BFA] text-xs">seguidos</p>
           </div>
           <div className="text-center">
             <p className="font-bold text-lg">{misPuntos}</p>
